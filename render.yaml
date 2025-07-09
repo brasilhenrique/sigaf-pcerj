@@ -1,37 +1,39 @@
-# ARQUIVO: render.yaml (VERSÃO COM DISCO PERSISTENTE)
+# ARQUIVO: render.yaml (VERSÃO FINAL E CORRIGIDA)
 
 services:
+  # Serviço 1: Banco de Dados PostgreSQL (criado manualmente no painel)
+  - type: psql
+    name: sigaf-db
+    postgres:
+      majorVersion: 15
+      port: 5432
+    plan: free # Adicionando o plano aqui para consistência
+
+  # Serviço 2: A Aplicação Web (Django)
   - type: web
     name: sigaf-web
     env: python
     plan: free
+    
+    # ALTERAÇÃO 1: Definindo a versão do Python da maneira correta
+    pythonVersion: "3.11" 
+
     buildCommand: "./build.sh"
     startCommand: "gunicorn sigaf_project.wsgi:application"
     
-    # ALTERAÇÃO 1: Adicionamos a montagem do disco
-    # Isso garante que a pasta 'staticfiles' criada no build
-    # esteja disponível quando o servidor iniciar.
     disks:
-      - name: static-disk
+      - name: staticfiles
         mountPath: /opt/render/project/src/staticfiles
         sizeGB: 1
         
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: sigaf_project.settings.production
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
         fromService:
-          type: psql
+          # ALTERAÇÃO 2: Simplificando a referência ao serviço de DB
           name: sigaf-db
+          type: psql
           property: connectionString
-
-  # O serviço do banco de dados agora vai aqui, por organização
-  - type: psql
-    name: sigaf-db
-    postgres:
-      majorVersion: 15
-      port: 5432
