@@ -2,6 +2,7 @@
 
 from .base import *
 import os
+import dj_database_url
 
 # Configurações para o ambiente de PRODUÇÃO (DigitalOcean)
 DEBUG = False
@@ -26,7 +27,7 @@ DATABASES = {
 
 # --- Configuração do WhiteNoise para Arquivos Estáticos ---
 
-# Adiciona o middleware do WhiteNoise logo após o SecurityMiddleware
+# Adiciona o middleware do WhiteNoise. A posição é importante: logo após o SecurityMiddleware.
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 # Caminho onde o `collectstatic` irá juntar todos os arquivos estáticos
@@ -35,6 +36,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Define o backend de armazenamento para o WhiteNoise
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        # ALTERAÇÃO FINAL: Trocamos para uma versão menos rigorosa do WhiteNoise
+        # que não valida os sourcemaps e links internos dos arquivos CSS.
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
