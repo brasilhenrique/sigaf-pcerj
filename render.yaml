@@ -1,13 +1,21 @@
-# ARQUIVO: render.yaml (VERSÃO FINAL E CORRETA)
+# ARQUIVO: render.yaml (VERSÃO COM DISCO PERSISTENTE)
 
 services:
-  # O único serviço definido aqui é a nossa aplicação web
   - type: web
     name: sigaf-web
     env: python
     plan: free
     buildCommand: "./build.sh"
     startCommand: "gunicorn sigaf_project.wsgi:application"
+    
+    # ALTERAÇÃO 1: Adicionamos a montagem do disco
+    # Isso garante que a pasta 'staticfiles' criada no build
+    # esteja disponível quando o servidor iniciar.
+    disks:
+      - name: static-disk
+        mountPath: /opt/render/project/src/staticfiles
+        sizeGB: 1
+        
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: sigaf_project.settings.production
@@ -15,4 +23,15 @@ services:
         value: 3.11.9
       - key: DJANGO_SECRET_KEY
         generateValue: true
-      # A variável DATABASE_URL será adicionada manualmente no painel do Render
+      - key: DATABASE_URL
+        fromService:
+          type: psql
+          name: sigaf-db
+          property: connectionString
+
+  # O serviço do banco de dados agora vai aqui, por organização
+  - type: psql
+    name: sigaf-db
+    postgres:
+      majorVersion: 15
+      port: 5432
