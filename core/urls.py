@@ -1,24 +1,25 @@
-# F:\dev\sigaf-novo\core\urls.py (COMPLETO E CORRIGIDO - COM ROTAS DE DELEÇÃO PERMANENTE)
+# ARQUIVO: core/urls.py
 
 from django.urls import path
-from . import views
-from .views import auth_views, servidor_views, delegado_views
-from .views import admin_views
+from .views import auth_views, servidor_views, delegado_views, admin_views
 from .views.agente import dashboard_views as agente_dashboard_views
 from .views.agente import usuario_views as agente_usuario_views
 from .views.agente import folha_ponto_views as agente_folha_ponto_views
 from .views.agente import pdf_views as agente_pdf_views
 
-app_name = 'core' # Define o namespace para o aplicativo 'core'
+app_name = 'core'
 
 urlpatterns = [
+    # Rota raiz do site, aponta para a página de login
+    path('', auth_views.login_view, name='login_root'),
+
     # Autenticação
     path('login/', auth_views.login_view, name='login'),
     path('logout/', auth_views.logout_view, name='logout'),
     path('change_password/', auth_views.change_password_view, name='change_password'),
 
-    # Dashboards e Folha de Ponto Pessoal (Servidor, Agente, Delegado - veem a própria folha)
-    path('dashboard/', servidor_views.dashboard_view, name='dashboard'), # Dashboard genérico (Servidor padrão)
+    # Dashboards e Folha de Ponto Pessoal
+    path('dashboard/', servidor_views.dashboard_view, name='dashboard'), 
 
     # Ações do Servidor
     path('assinar_dia/', servidor_views.assinar_dia_view, name='assinar_dia'),
@@ -44,11 +45,9 @@ urlpatterns = [
     path('admin_geral/usuarios/inativar/<int:usuario_id>/', admin_views.inativar_usuario_admin_view, name='inativar_usuario_admin'),
     path('admin_geral/usuarios/historico_folhas/<int:usuario_id>/', agente_folha_ponto_views.agente_historico_folhas_view, name='admin_historico_folhas'),
     path('admin_geral/auditoria/', admin_views.admin_auditoria_view, name='admin_auditoria'),
-    # NOVAS ROTAS DE EXCLUSÃO PERMANENTE
     path('admin_geral/usuarios/deletar_permanente/<int:usuario_id>/', admin_views.deletar_usuario_permanente_view, name='deletar_usuario_permanente'),
     path('admin_geral/folhas/deletar_permanente/<int:folha_id>/', admin_views.deletar_folha_permanente_view, name='deletar_folha_permanente'),
-
-
+    
     # Rotas do Agente de Pessoal
     path('agente/dashboard/', agente_dashboard_views.agente_dashboard_view, name='agente_dashboard'),
     path('agente/usuarios/adicionar/', agente_usuario_views.adicionar_usuario_view, name='adicionar_usuario'),
