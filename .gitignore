@@ -1,0 +1,19 @@
+# Arquivo: .gitignore
+
+# Ignorar o ambiente virtual
+venv/
+
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+
+# Ignorar o banco de dados de desenvolvimento local
+db.sqlite3
+
+# Ignorar as bibliotecas estáticas de terceiros do AdminLTE
+# Elas serão servidas pelo WhiteNoise a partir do 'collectstatic'
+static/plugins/
+
+# Ignorar os arquivos de chave SSH
+pcerj_ssh_key
+pcerj_ssh_key.pub
