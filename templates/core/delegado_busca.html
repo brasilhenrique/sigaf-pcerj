@@ -1,0 +1,76 @@
+{% extends 'base_adminlte.html' %}
+
+{% block title %}Busca Global{% endblock %}
+
+{% block page_title %}Busca Global de Servidores{% endblock %}
+{% block page_title_header %}Busca Global de Servidores{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card card-info card-outline">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Ferramenta de Busca</h3>
+                <a href="{% url 'core:delegado_dashboard' %}" class="btn btn-sm btn-outline-secondary">Voltar ao Dashboard</a> {# Ajustado para usar namespace #}
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'core:delegado_busca' %}"> {# Ajustado para usar namespace #}
+                    <div class="input-group">
+                        <input type="search" name="q" class="form-control form-control-lg" placeholder="Digite o ID Funcional do servidor" value="{{ query }}">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-lg btn-default">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if search_performed %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3 class="card-title">Resultados da Busca</h3>
+                </div>
+                <div class="card-body">
+                    {% if servidor_encontrado %}
+                        <h4>Histórico de Folhas de Ponto: <strong>{{ servidor_encontrado.nome }}</strong></h4>
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Período</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for folha in folhas_do_servidor %}
+                                <tr>
+                                    <td>{{ folha.get_trimestre_display }} de {{ folha.ano }}</td>
+                                    <td>
+                                        {% if folha.status == 'Concluída' %}
+                                            <span class="badge badge-success">Concluída</span>
+                                        {% elif folha.status == 'Arquivada' %}
+                                            <span class="badge badge-secondary">Arquivada</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">Em Andamento</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right">
+                                        <a href="{% url 'core:delegado_ver_folha' folha.id %}" class="btn btn-sm btn-info">Visualizar / Conferir</a> {# Ajustado para usar namespace #}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="alert alert-warning text-center">
+                            Nenhum servidor encontrado com o ID Funcional informado.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

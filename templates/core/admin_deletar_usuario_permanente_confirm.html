@@ -1,0 +1,31 @@
+{% extends 'base_adminlte.html' %}
+
+{% block title %}Excluir Usuário Permanentemente{% endblock %}
+{% block page_title %}Excluir Usuário Permanentemente{% endblock %}
+{% block page_title_header %}Excluir Usuário Permanentemente{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-danger">
+            <div class="card-header">
+                <h3 class="card-title">ATENÇÃO! AÇÃO IRREVERSÍVEL!</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Você está prestes a apagar permanentemente o usuário:</p>
+                <h4 class="text-danger"><strong>{{ usuario_a_deletar.nome }} (ID: {{ usuario_a_deletar.id_funcional }})</strong></h4>
+                <hr>
+                <p class="text-danger font-weight-bold">Todos os dados associados a este usuário, incluindo **folhas de ponto, dias de ponto, assinaturas, conferências e histórico de transferências**, serão **DEFINITIVAMENTE EXCLUÍDOS** do banco de dados.</p>
+                <p class="mb-0">Uma vez excluído, não será possível recuperar este usuário ou seus dados. Prossiga somente se tiver absoluta certeza.</p>
+            </div>
+            <div class="card-footer text-right">
+                <form method="post" class="d-inline" action="{% url 'core:deletar_usuario_permanente' usuario_a_deletar.id %}">
+                    {% csrf_token %}
+                    <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary mr-2">Cancelar e Voltar</a>
+                    <button type="submit" class="btn btn-danger">Eu entendo os riscos. Excluir Permanentemente.</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

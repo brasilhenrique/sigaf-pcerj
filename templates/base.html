@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGAF PCERJ - {% block title %}Sistema de Frequência{% endblock %}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'core:dashboard' %}">SIGAF - PCERJ</a> {# Ajustado para usar namespace #}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    
+                    {% if request.user.is_authenticated %}
+                        {% if request.user.perfil == 'Servidor' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:dashboard' %}">Minha Folha de Ponto</a>
+                            </li>
+                        {% endif %}
+
+                        {% if request.user.perfil == 'Agente de Pessoal' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:agente_dashboard' %}">Dashboard do Agente</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:dashboard' %}">Minha Folha de Ponto</a>
+                            </li>
+                        {% endif %}
+
+                        {% if request.user.perfil == 'Delegado' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:delegado_dashboard' %}">Dashboard (Pendências)</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:delegado_minha_folha' %}">Minha Folha de Ponto</a>
+                            </li>
+                             <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:delegado_busca' %}">Busca Global</a> {# Adicionado link para busca global #}
+                            </li>
+                        {% endif %}
+
+                        {% if request.user.perfil == 'Administrador Geral' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'core:admin_geral_dashboard' %}">Dashboard</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Gerenciar Sistema
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenuDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'core:listar_unidades' %}">Gestão de Unidades</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'core:listar_agentes' %}">Gestão de Agentes</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'core:listar_usuarios' %}">Gestão de Usuários</a></li>
+                                     <li><hr class="dropdown-divider"></li> {# Divisor para logs #}
+                                    <li><a class="dropdown-item" href="{% url 'core:admin_auditoria' %}">Logs de Auditoria</a></li> {# Novo link para Logs #}
+                                </ul>
+                            </li>
+                        {% endif %}
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Olá, {{ request.user.get_short_name }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><span class="dropdown-item-text"><small>Perfil: {{ request.user.perfil }}</small></span></li>
+                                <li><a class="dropdown-item" href="{% url 'core:change_password' %}">Trocar Senha</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'core:logout' %}">Sair</a></li>
+                            </ul>
+                        </li>
+
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:login' %}">Login</a>
+                        </li>
+                    {% endif %}
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        {# Inclui o partial de mensagens #}
+        {% include 'core/partials/_messages.html' %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+</body>
+</html>

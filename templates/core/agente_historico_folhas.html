@@ -1,0 +1,64 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Histórico de Folhas de {{ servidor.nome }}{% endblock %}
+{% block page_title_header %}Histórico de Folhas de {{ servidor.nome }}{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+    <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar para Gestão de Usuários
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Folhas de Ponto de {{ servidor.nome }} (ID: {{ servidor.id_funcional }})</h3>
+        <div class="card-tools">
+            <a href="{% url 'core:agente_criar_folha' %}?usuario_id={{ servidor.id }}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Criar Folha Manual
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Período</th>
+                    <th>Status</th>
+                    <th>Unidade na Geração</th>
+                    <th style="width: 180px;">Ações</th> {# Aumentado a largura para mais botões #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for folha in folhas %}
+                <tr>
+                    <td>{{ folha.get_trimestre_display }} de {{ folha.ano }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if folha.status == 'Concluída' %}badge-success
+                            {% elif folha.status == 'Arquivada' %}badge-secondary
+                            {% else %}badge-warning{% endif %}">
+                            {{ folha.status }}
+                        </span>
+                    </td>
+                    <td>{{ folha.unidade_id_geracao.nome_unidade|default:"N/A" }}</td>
+                    <td class="text-center"> {# Centralizado para os botões #}
+                        <a href="{% url 'core:gerenciar_ponto' folha.id %}" class="btn btn-primary btn-sm" title="Gerenciar Folha"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'core:gerar_pdf_individual' folha.id %}" class="btn btn-secondary btn-sm" title="Gerar PDF"><i class="fas fa-file-pdf"></i></a>
+                        {# NOVO BOTÃO: Deletar Permanentemente Folha de Ponto #}
+                        <a href="{% url 'core:deletar_folha_permanente' folha.id %}" class="btn btn-danger btn-sm" title="Excluir Folha Permanentemente"
+                           onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente a folha de ponto e todos os seus dias! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">Nenhuma folha de ponto encontrada para este servidor.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

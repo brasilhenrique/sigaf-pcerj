@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Ponto - {{ folha.servidor.nome }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        @media print { .folha-ponto { page-break-after: always; } }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 8pt; color: #000; }
+        .folha-ponto { width: 100%; border-collapse: collapse; margin-bottom: 20px; } /* Adicionado margin-bottom */
+        .master-table { width: 100%; border-collapse: collapse; }
+        .master-table td, .master-table th { border: 1px solid black; padding: 4px; vertical-align: top; } /* Ajustado vertical-align */
+        .brasao-container { text-align: center; padding: 10px 0; }
+        .brasao-container img { width: 65px; height: auto; } /* Adicionado height: auto */
+        .header-info-left { font-weight: bold; font-size: 9pt; line-height: 1.4; vertical-align: top; border-right: 1px solid black; padding: 8px; }
+        .header-info-right { font-size: 9pt; line-height: 1.4; vertical-align: top; padding: 8px; }
+        .header-title { text-align: center; font-weight: bold; font-size: 10pt; padding: 8px; }
+        .no-border { border: none !important; }
+        .month-header { background-color: #E0E0E0; font-weight: bold; text-align: center; }
+        .day-header { background-color: #E0E0E0; font-weight: bold; text-align: center; font-size: 7.5pt; }
+        .day-cell { text-align: center; font-size: 8pt; vertical-align: middle; font-weight: bold; } /* Consistência de font-weight */
+        .separator-col { border-right: 1px solid black !important; width: 1%; background-color: #f0f0f0; } /* Cor para separador */
+        .signature-cell { text-align: center; font-size: 6.5pt; line-height: 1.2; word-break: break-word; vertical-align: middle;}
+        .ocorrencia-cell {
+            text-align: center;
+            font-weight: bold;
+            font-size: 8pt;
+            background-color: #f8f9fa; /* Um tom leve para destacar */
+            vertical-align: middle;
+        }
+        .pendente-assinatura {
+            color: #888; /* Cor cinza para pendente */
+            font-style: italic;
+            font-size: 7pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="folha-ponto">
+        <table class="master-table">
+            <thead>
+                <tr>
+                    <td colspan="10" class="no-border">
+                        <div class="brasao-container">
+                             <img src="{{ imagem_path }}" alt="Brasão da PCERJ">
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="header-info-left">
+                        GOVERNO DO ESTADO DO RIO DE JANEIRO<br>
+                        SECRETARIA ESTADUAL DE POLÍCIA CIVIL – SEPOL<br>
+                        POLÍCIA CIVIL DO ESTADO DO RIO DE JANEIRO
+                    </td>
+                    <td colspan="5" class="header-info-right">
+                        <b>NOME:</b> {{ folha.servidor.nome }}<br>
+                        <b>ID:</b> {{ folha.servidor.id_funcional }}<br>
+                        <b>LOTAÇÃO:</b> {{ folha.servidor.lotacao.nome_unidade|default:"N/A" }}
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="10" class="header-title">
+                        FOLHA DE PONTO TRIMESTRAL - {{ folha.get_trimestre_display }} / {{ folha.ano }}
+                    </td>
+                </tr>
+                <tr>
+                    <th rowspan="2" class="day-header" style="vertical-align: middle;">DIA</th>
+                    <th colspan="3" class="month-header">{{ meses.0|upper }}</th>
+                    <th colspan="3" class="month-header">{{ meses.1|upper }}</th>
+                    <th colspan="3" class="month-header">{{ meses.2|upper }}</th>
+                </tr>
+                <tr>
+                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="separator-col day-header"></th>
+                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="separator-col day-header"></th>
+                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="day-header" style="width:1%;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in linhas_tabela %}
+                <tr>
+                    <td class="day-cell">{{ linha.dia }}</td>
+                    {% for dia_obj in linha.meses %}
+                        {% if dia_obj %}
+                            {% if dia_obj.codigo.codigo.lower == 'livre' %} {# Verificação case-insensitive #}
+                                <td class="signature-cell">
+                                    {% if dia_obj.servidor_assinou %}
+                                        {{ folha.servidor.nome }}<br>
+                                        ID nº {{ folha.servidor.id_funcional }}
+                                    {% else %}
+                                        <span class="pendente-assinatura">Pendente de Assinatura</span> {# Texto "Pendente de Assinatura" #}
+                                    {% endif %}
+                                </td>
+                                <td class="signature-cell">
+                                    {% if dia_obj.delegado_conferiu %}
+                                        {{ dia_obj.delegado.nome }}<br>
+                                        ID nº {{ dia_obj.delegado.id_funcional }}
+                                    {% else %}
+                                        <span class="pendente-assinatura">Pendente de Conferência</span> {# Para o PDF, pode ser útil indicar pendência #}
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td colspan="2" class="ocorrencia-cell"> {# Renomeado para ocorrencia-cell #}
+                                    {% if dia_obj.codigo.codigo %}
+                                        {{ dia_obj.codigo.codigo }}-{{ dia_obj.codigo.denominacao }} {# Exibe CÓDIGO-DENOMINAÇÃO #}
+                                    {% else %}
+                                        {{ dia_obj.codigo.denominacao }}
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                            <td class="separator-col"></td>
+                        {% else %}
+                            <td colspan="3" class="separator-col"></td> {# Garante que o fundo cinza também se aplique a colunas vazias #}
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

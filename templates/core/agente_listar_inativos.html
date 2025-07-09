@@ -1,0 +1,87 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+{% load static %}
+
+{% block title %}Gerenciar Usuários Inativos{% endblock %}
+{% block page_title %}Gerenciar Usuários Inativos{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Gerenciar Usuários Inativos{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary"> {# Ajustado para usar namespace #}
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Buscar Usuários Inativos</h3>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{% url 'core:listar_inativos' %}" class="form-inline"> {# Ajustado para form-inline e namespace #}
+            <div class="input-group flex-grow-1 mr-2">
+                <input class="form-control" type="search" placeholder="Buscar inativos por Nome ou ID Funcional..." name="q" value="{{ search_query }}">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            {% if search_query %}
+                <a href="{% url 'core:listar_inativos' %}" class="btn btn-outline-secondary">Limpar Busca</a> {# Ajustado para namespace #}
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Lista de Usuários Inativos por Lotação</h3>
+    </div>
+    <div class="card-body p-0"> {# Removido table-responsive e usado p-0 para evitar padding extra #}
+        {% if inativos_por_lotacao %}
+            <table class="table table-striped table-hover align-middle mb-0"> {# Adicionado mb-0 #}
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>ID Funcional</th>
+                        <th>Última Lotação</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lotacao_nome, usuarios in inativos_por_lotacao.items %}
+                        <tr class="bg-light"> {# Estilo para o cabeçalho do grupo #}
+                            <td colspan="5" class="font-weight-bold text-primary">
+                                Última Lotação: {{ lotacao_nome }}
+                            </td>
+                        </tr>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>{{ usuario.nome }}</td>
+                            <td>{{ usuario.id_funcional }}</td>
+                            <td>{{ usuario.lotacao.nome_unidade|default:"N/A" }}</td>
+                            <td><span class="badge badge-secondary">{{ usuario.status_servidor }}</span></td> {# Ajustado para badge-secondary #}
+                            <td>
+                                {% if usuario.lotacao in request.user.unidades_gerenciadas.all %}
+                                    <form action="{% url 'core:reativar_usuario' usuario.id %}" method="post" class="d-inline"> {# Ajustado para usar namespace #}
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success" title="Reativar Usuário"><i class="fas fa-user-check"></i> Reativar</button>
+                                    </form>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Você não tem permissão para reativar usuários desta lotação."><i class="fas fa-user-check"></i> Reativar</button>
+                                {% endif %}
+                                <a href="{% url 'core:agente_historico_folhas' usuario.id %}" class="btn btn-sm btn-info" title="Histórico de Folhas"><i class="fas fa-history"></i> Histórico</a> {# Ajustado para usar namespace #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-info m-3 text-center"> {# Ajustado para alert-info #}
+                Nenhum usuário inativo encontrado nas suas unidades gerenciadas.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

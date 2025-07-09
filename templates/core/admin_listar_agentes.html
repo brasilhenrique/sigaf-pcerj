@@ -1,0 +1,77 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Gestão de Agentes de Pessoal{% endblock %}
+{% block page_title_header %}Gestão de Agentes de Pessoal{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+
+<div class="mb-3">
+    <a href="{% url 'core:admin_geral_dashboard' %}" class="btn btn-secondary"> {# Ajustado para usar namespace #}
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Agentes de Pessoal</h3>
+        <div class="card-tools">
+            <a href="{% url 'core:adicionar_agente' %}" class="btn btn-success btn-sm"> {# Ajustado para usar namespace #}
+                <i class="fas fa-plus"></i> Adicionar Agente
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>ID Funcional</th>
+                    <th>Lotação</th>
+                    <th>Unidades Gerenciadas</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for agente in agentes %}
+                <tr>
+                    <td>{{ agente.nome }}</td>
+                    <td>{{ agente.id_funcional }}</td>
+                    <td>{{ agente.lotacao.nome_unidade|default:"N/A" }}</td>
+                    <td>
+                        {% for unidade in agente.unidades_gerenciadas.all %}
+                            <span class="badge badge-pill badge-primary">{{ unidade.nome_unidade }}</span>
+                        {% empty %}
+                            Nenhuma
+                        {% endfor %}
+                    </td>
+                    <td class="text-center">
+                        {% if agente.ativo %}
+                            <span class="badge badge-success">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'core:editar_agente' agente.id %}" class="btn btn-info btn-sm" title="Editar Agente"><i class="fas fa-edit"></i></a> {# Ajustado para usar namespace #}
+                        {# Botão para inativar/ativar agente #}
+                        <form action="{% url 'core:inativar_agente' agente.id %}" method="post" class="d-inline"> {# Ajustado para usar namespace #}
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm {% if agente.ativo %}btn-warning{% else %}btn-success{% endif %}" 
+                                title="{% if agente.ativo %}Inativar Agente{% else %}Ativar Agente{% endif %}">
+                                {% if agente.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhum agente de pessoal cadastrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

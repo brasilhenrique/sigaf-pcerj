@@ -1,0 +1,101 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block title %}Conferência de Ponto: {{ folha.servidor.nome }}{% endblock %}
+{% block page_title %}Conferência de Ponto: {{ folha.servidor.nome }}{% endblock %}
+{% block page_title_header %}Conferência de Ponto: {{ folha.servidor.nome }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    {# CORREÇÃO AQUI: Botão de Voltar ao Dashboard na folha de ponto de CONFERÊNCIA #}
+    <a href="{% url 'core:delegado_dashboard' %}" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i>Voltar para Pendências</a>
+</div>
+
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-user-check mr-1"></i>
+            {{ folha.get_trimestre_display }} de {{ folha.ano }}
+            {% if folha.status == 'Arquivada' %}
+                <span class="badge badge-secondary ml-2">Arquivada</span>
+            {% elif folha.status == 'Concluída' %}
+                <span class="badge badge-success ml-2">Concluída</span>
+            {% else %}
+                <span class="badge badge-warning ml-2">Em Andamento</span>
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for mes_data in meses %}
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="card-title">{{ mes_data.nome_mes }}</h4>
+                        <div class="btn-group">
+                            {# LÓGICA PARA EXIBIR BOTÕES DE CONFERIR/DESFAZER MÊS INTEIRO #}
+                            {% if mes_data.pode_conferir_mes %}
+                                <form action="{% url 'core:delegado_conferir_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-info">Conferir Mês</button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if mes_data.pode_desfazer_conferencia_mes %}
+                                <form action="{% url 'core:desfazer_conferencia_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Desfazer Mês</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                {% for dia in mes_data.dias %}
+                                <tr>
+                                    <td class="text-center" style="width: 40px;"><strong>{{ dia.data_dia|date:"d" }}</strong></td>
+                                    <td>
+                                        {% if dia.servidor_assinou %}
+                                            <span class="text-success font-weight-bold">Assinado Eletronicamente</span>
+                                        {% elif dia.codigo.codigo.lower == 'livre' %}
+                                            <span class="text-muted">Pendente de Assinatura</span>
+                                        {% else %}
+                                            {{ dia.codigo.denominacao }}
+                                        {% endif %}
+                                        
+                                        {% if dia.delegado_conferiu %}
+                                            <br><small class="text-info">Conferido por {{ dia.delegado.get_short_name }} (ID: {{ dia.delegado.id_funcional }})</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right" style="width: 140px;">
+                                        {% if folha.status != 'Arquivada' %}
+                                            {% if dia.servidor_assinou and not dia.delegado_conferiu %}
+                                            <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-info">Conferir</button>
+                                            </form>
+                                            {% elif dia.delegado_conferiu and dia.delegado == request.user %}
+                                            <form action="{% url 'core:delegado_desfazer_conferencia' dia.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">Desfazer</button>
+                                            </form>
+                                            {% elif dia.delegado_conferiu %}
+                                                <span class="text-success">Conferido</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Arquivada</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

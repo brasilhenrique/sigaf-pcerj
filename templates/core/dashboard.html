@@ -1,0 +1,127 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Minha Folha de Ponto{% endblock %}
+{% block page_title_header %}Minha Folha de Ponto{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    {# Botão de Voltar ao Dashboard - Lógica condicional para Agente de Pessoal #}
+    {% if request.user.perfil == 'Agente de Pessoal' %}
+        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard do Agente
+        </a>
+    {% else %}
+        {# Para Servidor e Delegado, volta para a própria folha (que é o dashboard deles) #}
+        <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+        </a>
+    {% endif %}
+</div>
+
+<div class="row">
+    {% for item in folhas_com_dados %}
+    <div class="col-12">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-calendar-alt mr-1"></i>
+                    {{ item.folha_ponto.get_trimestre_display }} de {{ item.folha_ponto.ano }}
+                    {% if item.folha_ponto.status == 'Arquivada' %}
+                        <span class="badge badge-secondary ml-2">Arquivada</span>
+                    {% elif item.folha_ponto.status == 'Concluída' %}
+                        <span class="badge badge-success ml-2">Concluída</span>
+                    {% else %}
+                        <span class="badge badge-warning ml-2">Em Andamento</span>
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for mes_data in item.meses %}
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="card-title">{{ mes_data.nome_mes }}</h4>
+                                <div>
+                                    {# Botões de Assinar/Desfazer Assinatura para a PRÓPRIA FOLHA do Delegado #}
+                                    {% if mes_data.pode_assinar_mes %}
+                                    <form action="{% url 'core:assinar_mes_inteiro' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <button type="submit" class="btn btn-sm btn-success">Assinar Mês</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if mes_data.totalmente_assinado and not mes_data.totalmente_conferido %}
+                                    <form action="{% url 'core:desfazer_mes_inteiro' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Desfazer Mês</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-bordered">
+                                    <tbody>
+                                        {% for dia in mes_data.dias %}
+                                        <tr>
+                                            <td class="text-center" style="width: 40px;"><strong>{{ dia.data_dia|date:"d" }}</strong></td>
+                                            <td>
+                                                {% if dia.servidor_assinou %}
+                                                    <span class="text-success font-weight-bold">Assinado Eletronicamente</span>
+                                                {% elif dia.codigo.codigo.lower == 'livre' %}
+                                                    <span class="text-muted">Pendente de Assinatura</span>
+                                                {% else %}
+                                                    {{ dia.codigo.denominacao }}
+                                                {% endif %}
+
+                                                {% if dia.delegado_conferiu %}
+                                                    <br><small class="text-info" title="Conferido por {{ dia.delegado.get_full_display }}">Conferido por {{ dia.delegado.get_short_name }} (ID: {{ dia.delegado.id_funcional }})</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right" style="width: 120px;">
+                                                {% if dia.codigo.codigo.lower == 'livre' and not dia.servidor_assinou and not dia.delegado_conferiu %}
+                                                <form action="{% url 'core:assinar_dia' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="dia_id" value="{{ dia.id }}">
+                                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                                    <button type="submit" class="btn btn-sm btn-primary">Assinar</button>
+                                                </form>
+                                                {% elif dia.servidor_assinou and not dia.delegado_conferiu %}
+                                                <form action="{% url 'core:desfazer_assinatura' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="dia_id" value="{{ dia.id }}">
+                                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Desfazer assinatura">Desfazer</button>
+                                                </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info text-center">
+            <h4><i class="icon fas fa-check-circle"></i> Tudo em ordem!</h4>
+            <p>Nenhuma folha de ponto ativa encontrada para você no momento.</p>
+            {# Adicionado um botão de retorno ao dashboard principal para este caso também #}
+            {% if request.user.perfil == 'Agente de Pessoal' %}
+                <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary mt-3">Voltar ao Dashboard do Agente</a>
+            {% else %}
+                <a href="{% url 'core:dashboard' %}" class="btn btn-secondary mt-3">Voltar ao Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

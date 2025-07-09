@@ -1,0 +1,68 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Gestão de Unidades{% endblock %}
+{% block page_title_header %}Gestão de Unidades{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+
+<div class="mb-3">
+    <a href="{% url 'core:admin_geral_dashboard' %}" class="btn btn-secondary"> {# Ajustado para usar namespace #}
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Unidades do Sistema</h3>
+        <div class="card-tools">
+            <a href="{% url 'core:adicionar_unidade' %}" class="btn btn-success btn-sm"> {# Ajustado para usar namespace #}
+                <i class="fas fa-plus"></i> Adicionar Unidade
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Nome da Unidade</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for unidade in unidades %}
+                <tr>
+                    <td>{{ unidade.nome_unidade }}</td>
+                    <td>
+                        {% if unidade.ativo %}
+                            <span class="badge badge-success">Ativa</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativa</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'core:editar_unidade' unidade.id %}" class="btn btn-info btn-sm" title="Editar Unidade"><i class="fas fa-edit"></i></a> {# Ajustado para usar namespace #}
+                        
+                        {# Botão para inativar/ativar unidade #}
+                        <form action="{% url 'core:inativar_unidade' unidade.id %}" method="post" class="d-inline"> {# Ajustado para usar namespace #}
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm {% if unidade.ativo %}btn-warning{% else %}btn-success{% endif %}" 
+                                title="{% if unidade.ativo %}Inativar Unidade{% else %}Ativar Unidade{% endif %}">
+                                {% if unidade.ativo %}<i class="fas fa-toggle-off"></i>{% else %}<i class="fas fa-toggle-on"></i>{% endif %}
+                            </button>
+                        </form>
+
+                        <a href="{% url 'core:excluir_unidade_permanente' unidade.id %}" class="btn btn-danger btn-sm" title="Excluir Permanentemente"><i class="fas fa-trash"></i></a> {# Ajustado para usar namespace #}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center">Nenhuma unidade cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

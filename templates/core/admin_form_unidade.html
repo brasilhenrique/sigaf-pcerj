@@ -1,0 +1,42 @@
+{% extends 'base_adminlte.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block page_title %}{{ titulo }}{% endblock %}
+{% block page_title_header %}{{ titulo }}{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-primary">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="card-body">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="{{ form.nome_unidade.id_for_label }}">{{ form.nome_unidade.label }}</label>
+                        {{ form.nome_unidade }}
+                         {% if form.nome_unidade.errors %}
+                            <div class="text-danger small mt-1">{{ form.nome_unidade.errors|first }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-check">
+                        {{ form.ativo }}
+                        <label class="form-check-label" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'core:listar_unidades' %}" class="btn btn-secondary">Cancelar</a> {# Ajustado para usar namespace #}
+                    <button type="submit" class="btn btn-primary float-right">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

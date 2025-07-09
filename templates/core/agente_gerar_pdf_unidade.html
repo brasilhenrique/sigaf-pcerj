@@ -1,0 +1,57 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+{% load static %} {# Adicionado load static caso seja necessário no futuro #}
+
+{% block title %}Gerar PDF por Unidade{% endblock %}
+{% block page_title %}Gerar PDF por Unidade{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Gerar PDF por Unidade{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-info"> {# Estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Gerar PDF Consolidado por Unidade</h3>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Selecione a unidade, o ano e o trimestre para gerar um arquivo PDF contendo as folhas de ponto de todos os servidores correspondentes.</p>
+                <form method="post" action="{% url 'core:gerar_pdf_unidade' %}"> {# Ajustado para usar namespace #}
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-5 form-group mb-3"> {# Usando form-group #}
+                            <label for="{{ form.unidade.id_for_label }}" class="form-label">{{ form.unidade.label }}</label>
+                            {{ form.unidade }}
+                            {% if form.unidade.errors %}<div class="text-danger small mt-1">{{ form.unidade.errors|first }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3 form-group mb-3"> {# Usando form-group #}
+                            <label for="{{ form.ano.id_for_label }}" class="form-label">{{ form.ano.label }}</label>
+                            {{ form.ano }}
+                             {% if form.ano.errors %}<div class="text-danger small mt-1">{{ form.ano.errors|first }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4 form-group mb-3"> {# Usando form-group #}
+                            <label for="{{ form.trimestre.id_for_label }}" class="form-label">{{ form.trimestre.label }}</label>
+                            {{ form.trimestre }}
+                             {% if form.trimestre.errors %}
+                                <div class="text-danger small mt-1">{{ form.trimestre.errors|first }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <hr>
+                    <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}
+                        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Voltar</a> {# Ajustado para usar namespace #}
+                        <button type="submit" class="btn btn-primary">Gerar PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

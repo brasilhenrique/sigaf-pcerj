@@ -1,0 +1,56 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+{% load static %} {# Adicionado load static caso seja necessário no futuro #}
+
+{% block title %}Transferir Usuário{% endblock %}
+
+{% block page_title %}Transferir Usuário{% endblock %}
+{% block page_title_header %}Transferir Usuário{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-info card-outline"> {# Estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Transferência de Unidade</h3>
+            </div>
+            <form method="post" novalidate>
+                <div class="card-body">
+                    <p>Você está transferindo o servidor <strong>{{ usuario_a_transferir.nome }}</strong>.</p>
+                    <p class="text-muted">Lotação Atual: <strong>{{ unidade_origem.nome_unidade|default:"N/A" }}</strong></p> {# Exibe a unidade de origem #}
+                    <hr>
+
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-group mb-3"> {# Usando form-group #}
+                        <label for="{{ form.unidade_destino.id_for_label }}">{{ form.unidade_destino.label }}</label>
+                        {{ form.unidade_destino }}
+                        {% if form.unidade_destino.errors %}
+                            <div class="text-danger small mt-1">{{ form.unidade_destino.errors|first }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group mb-3"> {# Usando form-group #}
+                        <label for="{{ form.data_transferencia.id_for_label }}">{{ form.data_transferencia.label }}</label>
+                        {{ form.data_transferencia }}
+                        {% if form.data_transferencia.errors %}
+                            <div class="text-danger small mt-1">{{ form.data_transferencia.errors|first }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer text-right">
+                    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">Cancelar</a> {# Ajustado para usar namespace #}
+                    <button type="submit" class="btn btn-primary">Confirmar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

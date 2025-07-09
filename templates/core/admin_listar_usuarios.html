@@ -1,0 +1,109 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Gestão de Usuários{% endblock %}
+{% block page_title_header %}Gestão de Usuários{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'core:admin_geral_dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Lista de Usuários do Sistema</h3>
+        <div class="card-tools">
+            <a href="{% url 'core:adicionar_usuario_admin' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Adicionar Usuário
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="mb-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar por Nome ou ID..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">Buscar</button>
+                    {% if search_query %}
+                        <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary ml-2">Limpar Busca</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        <table id="tabela-usuarios" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>ID Funcional</th>
+                    <th>Perfil</th>
+                    <th>Lotação</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario.nome }}</td>
+                    <td>{{ usuario.id_funcional }}</td>
+                    <td>{{ usuario.perfil }}</td>
+                    <td>{{ usuario.lotacao.nome_unidade|default:"N/A" }}</td>
+                    <td>
+                        {% if usuario.ativo %}
+                            <span class="badge badge-success">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center"> {# Centralizado para os botões #}
+                        <a href="{% url 'core:editar_usuario_admin' usuario.id %}" class="btn btn-sm btn-info" title="Editar"><i class="fas fa-edit"></i></a>
+                        <form action="{% url 'core:inativar_usuario_admin' usuario.id %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm {% if usuario.ativo %}btn-warning{% else %}btn-success{% endif %}" 
+                                title="{% if usuario.ativo %}Inativar Usuário{% else %}Ativar Usuário{% endif %}">
+                                {% if usuario.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
+                            </button>
+                        </form>
+                        <a href="{% url 'core:admin_historico_folhas' usuario.id %}" class="btn btn-sm btn-secondary" title="Histórico de Folhas"><i class="fas fa-history"></i></a>
+                        {# NOVO BOTÃO: Deletar Permanentemente Usuário #}
+                        <a href="{% url 'core:deletar_usuario_permanente' usuario.id %}" class="btn btn-sm btn-danger" title="Excluir Usuário Permanentemente"
+                           onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente o usuário e todos os dados relacionados (folhas, assinaturas, conferências)! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhum usuário encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<script>
+    $(function () {
+        $("#tabela-usuarios").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "autoWidth": false,
+            "searching": false, // A busca do DataTables é desativada para usar a do Django
+            "paging": true,
+            "info": true,
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Portuguese-Brasil.json"
+            }
+        });
+    });
+</script>
+{% endblock %}

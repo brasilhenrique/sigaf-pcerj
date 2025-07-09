@@ -1,0 +1,63 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+
+{% block title %}Criar Folha de Ponto Manualmente{% endblock %}
+{% block page_title %}Criar Folha de Ponto Manualmente{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Criar Folha de Ponto Manualmente{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-success"> {# Estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Criar Folha de Ponto Manualmente</h3>
+            </div>
+            <div class="card-body">
+                <p>Use este formulário para criar uma nova folha de ponto para um servidor em um período específico. Isso é útil para casos de exceção, como reativação de um servidor no meio de um trimestre.</p>
+                <hr>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-group mb-3"> {# Usando form-group #}
+                        <label for="{{ form.servidor.id_for_label }}" class="form-label">{{ form.servidor.label }}</label>
+                        {{ form.servidor }}
+                        {% if form.servidor.errors %}
+                            <div class="text-danger small mt-1">{{ form.servidor.errors|first }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group mb-3"> {# Usando form-group #}
+                            <label for="{{ form.ano.id_for_label }}" class="form-label">{{ form.ano.label }}</label>
+                            {{ form.ano }}
+                             {% if form.ano.errors %}
+                                <div class="text-danger small mt-1">{{ form.ano.errors|first }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 form-group mb-3"> {# Usando form-group #}
+                            <label for="{{ form.trimestre.id_for_label }}" class="form-label">{{ form.trimestre.label }}</label>
+                            {{ form.trimestre }}
+                             {% if form.trimestre.errors %}
+                                <div class="text-danger small mt-1">{{ form.trimestre.errors|first }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+                    <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}
+                        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a> {# Ajustado para usar namespace #}
+                        <button type="submit" class="btn btn-success">Criar Folha de Ponto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{# ARQUIVO: templates/core/impressao_ponto_unidade.html #}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ titulo_pdf }}</title>
+    <style>
+        @page { size: A4 portrait; margin: 2cm; }
+        body { font-family: 'Helvetica', Arial, sans-serif; }
+        
+        .folha-de-rosto {
+            text-align: center;
+            page-break-after: always;
+        }
+        .folha-de-rosto h1 {
+            font-size: 16pt;
+            margin-bottom: 5px;
+        }
+        .folha-de-rosto h2 {
+            font-size: 14pt;
+            font-weight: normal;
+            margin-top: 0;
+            margin-bottom: 40px;
+        }
+        .folha-de-rosto ol {
+            text-align: left;
+            padding-left: 40px;
+            font-size: 11pt;
+            line-height: 1.6;
+            list-style-position: inside; /* Garante que os números fiquem dentro do padding */
+        }
+        /* ALTERAÇÃO 2: Estilo para as linhas da lista */
+        .folha-de-rosto li {
+            padding: 6px;
+            border-radius: 4px; /* Cantos levemente arredondados */
+        }
+        .folha-de-rosto li:nth-child(even) {
+            background-color: #f0f0f0; /* Cor cinza claro para linhas pares */
+        }
+        .folha-de-rosto li span {
+            font-weight: normal;
+        }
+        .status-concluida {
+            color: green;
+            font-weight: bold;
+        }
+        .status-andamento {
+            color: #d9534f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="folha-de-rosto">
+        <img src="{{ imagem_path }}" alt="Brasão da PCERJ" style="width: 80px; margin-bottom: 20px;">
+        <h1>Relatório de Frequência</h1>
+        
+        <h2>{{ unidade.nome_unidade }} - {{ trimestre_display }} de {{ ano }}</h2>
+        
+        <ol>
+            {% for item in dados_relatorio %}
+                <li>
+                    <strong>{{ item.folha.servidor.nome }}</strong> - 
+                    <span>ID: {{ item.folha.servidor.id_funcional }} - Status: 
+                        {% if item.folha.status == 'Concluída' or item.folha.status == 'Arquivada' %}
+                            <span class="status-concluida">Concluída</span>
+                        {% else %}
+                            <span class="status-andamento">Em Andamento</span>
+                        {% endif %}
+                    </span>
+                </li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    {% for item in dados_relatorio %}
+        {% include "core/impressao_ponto_individual.html" with folha=item.folha linhas_tabela=item.linhas_tabela meses=item.meses imagem_path=imagem_path %}
+    {% endfor %}
+</body>
+</html>

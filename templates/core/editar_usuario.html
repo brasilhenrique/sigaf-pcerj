@@ -1,0 +1,92 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+{% load static %} {# Adicionado load static caso seja necessário no futuro #}
+
+{% block title %}Editar Usuário{% endblock %}
+
+{% block page_title %}Editar Usuário: {{ usuario_a_editar.nome }}{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Editar Usuário: {{ usuario_a_editar.nome }}{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-primary"> {# Estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Editar Usuário: {{ usuario_a_editar.nome }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3"> {# Usando form-group #}
+                                {# ID Funcional é somente leitura na edição #}
+                                <label class="form-label">ID Funcional</label>
+                                <input type="text" class="form-control" value="{{ usuario_a_editar.id_funcional }}" disabled>
+                                <small class="form-text text-muted">ID Funcional não pode ser alterado.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group mb-3"> {# Usando form-group #}
+                                <label for="{{ form.nome.id_for_label }}" class="form-label">{{ form.nome.label }}</label>
+                                {{ form.nome }}
+                                {% if form.nome.errors %}<div class="text-danger small">{{ form.nome.errors|striptags }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3"> {# Usando form-group #}
+                                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors|striptags }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3"> {# Usando form-group #}
+                                <label for="{{ form.lotacao.id_for_label }}" class="form-label">{{ form.lotacao.label }}</label>
+                                {{ form.lotacao }}
+                                {% if form.lotacao.errors %}<div class="text-danger small">{{ form.lotacao.errors|striptags }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3"> {# Usando form-group #}
+                                <label for="{{ form.perfil.id_for_label }}" class="form-label">{{ form.perfil.label }}</label>
+                                {{ form.perfil }}
+                                {% if form.perfil.errors %}<div class="text-danger small">{{ form.perfil.errors|striptags }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {# Campo status_servidor para edição #}
+                            {% if form.status_servidor %}
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.status_servidor.id_for_label }}" class="form-label">{{ form.status_servidor.label }}</label>
+                                    {{ form.status_servidor }}
+                                    {% if form.status_servidor.errors %}<div class="text-danger small">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}
+                        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a> {# Ajustado para usar namespace #}
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Minha Folha de Ponto{% endblock %}
+{% block page_title_header %}Minha Folha de Ponto{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    {# CORREÇÃO AQUI: Botão de Voltar ao Dashboard na folha de ponto do DELEGADO #}
+    <a href="{% url 'core:delegado_dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar para Pendências
+    </a>
+</div>
+
+{# O LAÇO QUE FALTAVA FOI ADICIONADO AQUI: ele percorre a lista de folhas pendentes #}
+{% for item in folhas_com_dados %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-user-clock mr-1"></i>
+            {# As variáveis agora usam 'item.folha_ponto' #}
+            {{ item.folha_ponto.get_trimestre_display }} de {{ item.folha_ponto.ano }}
+            {% if item.folha_ponto.status == 'Arquivada' %}
+                <span class="badge badge-secondary ml-2">Arquivada</span>
+            {% elif item.folha_ponto.status == 'Concluída' %}
+                <span class="badge badge-success ml-2">Concluída</span>
+            {% else %}
+                <span class="badge badge-warning ml-2">Em Andamento</span>
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {# O laço interno agora usa 'item.meses' #}
+            {% for mes_data in item.meses %}
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="card-title">{{ mes_data.nome_mes }}</h4>
+                        <div class="btn-group">
+                            {# Botões de Assinar/Desfazer Assinatura para a PRÓPRIA FOLHA do Delegado #}
+                            {% if mes_data.pode_assinar_mes %}
+                                <form action="{% url 'core:assinar_mes_inteiro' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Assinar Mês</button>
+                                </form>
+                            {% elif mes_data.totalmente_assinado and not mes_data.totalmente_conferido %}
+                                <form action="{% url 'core:desfazer_mes_inteiro' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">Desfazer Assinatura</button>
+                                </form>
+                            {% endif %}
+                            
+                            {# Botões de Conferir/Desfazer CONFERÊNCIA para a PRÓPRIA FOLHA do Delegado #}
+                            {% if mes_data.pode_conferir_mes %}
+                                <form action="{% url 'core:delegado_conferir_mes' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-info">Conferir Mês</button>
+                                </form>
+                            {% elif mes_data.totalmente_conferido %}
+                                <form action="{% url 'core:desfazer_conferencia_mes' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Desfazer Conf.</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                {% for dia in mes_data.dias %}
+                                <tr>
+                                    <td class="text-center" style="width: 40px;"><strong>{{ dia.data_dia|date:"d" }}</strong></td>
+                                    <td>
+                                        {% if dia.servidor_assinou %}
+                                            <span class="text-success font-weight-bold">Assinado Eletronicamente</span>
+                                        {% elif dia.codigo.codigo.lower == 'livre' %}
+                                            <span class="text-muted">Pendente de Assinatura</span>
+                                        {% else %}
+                                            {{ dia.codigo.denominacao }}
+                                        {% endif %}
+                                        
+                                        {% if dia.delegado_conferiu %}
+                                            <br><small class="text-info">Conferido por você</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right" style="width: 140px;">
+                                        {% if item.folha_ponto.status != 'Arquivada' %}
+                                            {# Botões de Assinar/Desfazer dia #}
+                                            {% if dia.codigo.codigo.lower == 'livre' and not dia.servidor_assinou and not dia.delegado_conferiu %}
+                                                <form action="{% url 'core:assinar_dia' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="dia_id" value="{{ dia.id }}">
+                                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                                    <button type="submit" class="btn btn-sm btn-primary">Assinar</button>
+                                                </form>
+                                            {% elif dia.servidor_assinou and not dia.delegado_conferiu %}
+                                                <form action="{% url 'core:desfazer_assinatura' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="dia_id" value="{{ dia.id }}">
+                                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Desfazer assinatura">Desfazer</button>
+                                                </form>
+                                            {% endif %}
+                                            {# Botões de Conferir/Desfazer conferência #}
+                                            {% if dia.servidor_assinou and not dia.delegado_conferiu %}
+                                                <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post" class="d-inline ml-1">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-info" title="Conferir sua própria assinatura">Conferir</button>
+                                                </form>
+                                            {% elif dia.delegado_conferiu and dia.delegado == request.user %}
+                                                <form action="{% url 'core:delegado_desfazer_conferencia' dia.id %}" method="post" class="d-inline ml-1">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Desfazer sua conferência">Desfazer Conf.</button>
+                                                </form>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Arquivada</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12">
+    <div class="alert alert-success text-center">
+        <h4><i class="icon fas fa-check-circle"></i> Tudo em ordem!</h4>
+        <p>Você não possui folhas de ponto com pendências de assinatura ou conferência no momento.</p>
+        {# CORREÇÃO AQUI: Botão de retorno ao dashboard de DELEGADO #}
+        <a href="{% url 'core:delegado_dashboard' %}" class="btn btn-secondary mt-3">Voltar para Pendências</a>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

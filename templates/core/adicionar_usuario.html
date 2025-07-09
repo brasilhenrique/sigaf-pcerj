@@ -1,0 +1,55 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html para consistência #}
+{% load static %} {# Adicionado load static caso seja necessário no futuro #}
+
+{% block title %}Adicionar Novo Usuário{% endblock %}
+{% block page_title %}Adicionar Novo Usuário{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Adicionar Novo Usuário{% endblock %} {# Adicionado para AdminLTE #}
+
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para usar layout do AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-primary"> {# Ajustado para usar estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Adicionar Novo Usuário</h3> {# Ajustado para h3 com card-title #}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {# Não é mais necessário incluir _messages.html aqui, pois já está em base_adminlte.html #}
+                    {# {% include 'core/partials/_messages.html' %} #}
+
+                    {# Renderiza todos os campos do formulário com estilos do AdminLTE/Bootstrap #}
+                    {% for field in form %}
+                        <div class="form-group mb-3"> {# Usando form-group para alinhamento e mb-3 para margem #}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div> {# Estilo de erro corrigido #}
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    {# Exibe erros não relacionados a campos específicos #}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}
+                        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a> {# Ajustado para usar namespace #}
+                        <button type="submit" class="btn btn-primary">Salvar Usuário</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.login-box {
+    padding: 40px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Adiciona um estilo para botões de aplicação maiores */
+.btn-app-lg {
+  border-radius: 3px;
+  background-color: #f4f4f4;
+  border: 1px solid #ddd;
+  color: #666;
+  font-size: 14px;
+  height: 100px; /* Altura aumentada */
+  min-width: 120px; /* Largura aumentada */
+  padding: 15px 5px;
+  position: relative;
+  text-align: center;
+}
+
+.btn-app-lg > .fa,
+.btn-app-lg > .fas,
+.btn-app-lg > .far,
+.btn-app-lg > .fab,
+.btn-app-lg > .glyphicon,
+.btn-app-lg > .ion {
+  font-size: 35px; /* Ícone aumentado */
+  display: block;
+}

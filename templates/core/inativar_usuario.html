@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Inativar Usuário{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Inativar Usuário: {{ usuario_a_inativar.nome }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <p>Selecione o motivo para inativar o usuário. Esta ação o removerá da lista de servidores ativos e impedirá seu acesso ao sistema.</p>
+
+                        {{ form.as_p }}
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a>
+                            <button type="submit" class="btn btn-dark">Confirmar Inativação</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

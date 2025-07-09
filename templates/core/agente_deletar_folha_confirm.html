@@ -1,0 +1,37 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+
+{% block title %}Confirmar Exclusão de Folha{% endblock %}
+{% block page_title %}Confirmar Exclusão de Folha{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Confirmar Exclusão de Folha{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
+    <div class="col-md-8">
+        <div class="card card-danger"> {# Estilo de card do AdminLTE #}
+            <div class="card-header">
+                <h3 class="card-title">Confirmar Exclusão de Folha de Ponto</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">ATENÇÃO! AÇÃO IRREVERSÍVEL!</h4>
+                    <p>Você está prestes a apagar permanentemente a seguinte folha de ponto:</p>
+                    <ul>
+                        <li><strong>Servidor:</strong> {{ folha.servidor.nome }}</li>
+                        <li><strong>Período:</strong> {{ folha.get_trimestre_display }} de {{ folha.ano }}</li>
+                    </ul>
+                    <hr>
+                    <p class="mb-0">Todos os registros de dias, assinaturas e conferências para este período serão **definitivamente excluídos**. Uma vez apagada, esta folha de ponto não poderá ser recuperada.</p>
+                </div>
+
+                <form method="post" action="{% url 'core:agente_deletar_folha' folha.id %}"> {# Ajustado para usar namespace #}
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'core:agente_historico_folhas' folha.servidor.id %}" class="btn btn-secondary me-2">Cancelar e Voltar</a> {# Ajustado para usar namespace #}
+                        <button type="submit" class="btn btn-danger">Sim, tenho certeza. Excluir Permanentemente.</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

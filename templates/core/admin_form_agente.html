@@ -1,0 +1,100 @@
+{% extends 'base_adminlte.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block page_title %}{{ titulo }}{% endblock %}
+{% block page_title_header %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card card-primary">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="card-body">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <h4>Dados do Agente</h4>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label for="{{ form.nome.id_for_label }}">{{ form.nome.label }}</label>
+                            {{ form.nome }}
+                            {% if form.nome.errors %}<div class="text-danger small mt-1">{{ form.nome.errors|first }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            {# ID Funcional só aparece na criação; na edição é texto desabilitado #}
+                            {% if form.id_funcional %}
+                                <label for="{{ form.id_funcional.id_for_label }}">{{ form.id_funcional.label }}</label>
+                                {{ form.id_funcional }}
+                                {% if form.id_funcional.errors %}<div class="text-danger small mt-1">{{ form.id_funcional.errors|first }}</div>{% endif %}
+                            {% else %}
+                                <label>ID Funcional</label>
+                                <input type="text" class="form-control" value="{{ agente.id_funcional }}" disabled>
+                                <small class="form-text text-muted">ID Funcional não pode ser alterado após a criação.</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors|first }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.lotacao.id_for_label }}">{{ form.lotacao.label }}</label>
+                        {{ form.lotacao }}
+                        {% if form.lotacao.errors %}<div class="text-danger small mt-1">{{ form.lotacao.errors|first }}</div>{% endif %}
+                    </div>
+
+                    <h4 class="mt-4">Permissões</h4>
+                    <hr>
+                    <div class="form-group">
+                        <label>Unidades Gerenciadas (O agente terá permissão para gerenciar os servidores destas unidades)</label>
+                        <div class="row p-2" style="background-color: #f8f9fa; border-radius: 5px;">
+                            {# Renderiza os checkboxes de unidades gerenciadas usando o campo do formulário #}
+                            {% for checkbox in form.unidades_gerenciadas %}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ checkbox.tag }} {# Renderiza <input type="checkbox"> #}
+                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                        {{ checkbox.choice_label }} {# Texto do label (nome da unidade) #}
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                                <p class="col-12">Nenhuma unidade ativa encontrada. Certifique-se de cadastrar unidades antes de criar/editar agentes.</p>
+                            {% endfor %}
+                        </div>
+                         {% if form.unidades_gerenciadas.errors %}<div class="text-danger small mt-1">{{ form.unidades_gerenciadas.errors|first }}</div>{% endif %}
+                    </div>
+                    
+                    {# AJUSTE AQUI para o campo 'ativo' - Renderização manual do checkbox #}
+                    {% if form.ativo %}
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="{{ form.ativo.name }}" id="{{ form.ativo.id_for_label }}" 
+                                   class="form-check-input" {% if form.ativo.value %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+                                {{ form.ativo.label }}
+                            </label>
+                            {% if form.ativo.errors %}<div class="text-danger small mt-1">{{ form.ativo.errors|first }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'core:listar_agentes' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary float-right">Salvar Agente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

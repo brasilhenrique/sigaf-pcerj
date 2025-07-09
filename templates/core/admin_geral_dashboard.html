@@ -1,0 +1,100 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block title %}Dashboard do Administrador{% endblock %}
+{% block page_title %}Dashboard do Administrador Geral{% endblock %}
+{% block page_title_header %}Dashboard do Administrador Geral{% endblock %} {# Adicionado para AdminLTE #}
+
+
+{% block content %}
+<div class="row">
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="info-box"><span class="info-box-icon bg-info elevation-1"><i class="fas fa-users"></i></span><div class="info-box-content"><span class="info-box-text">Total de Servidores Ativos</span><span class="info-box-number">{{ total_usuarios }}</span></div></div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="info-box mb-3"><span class="info-box-icon bg-danger elevation-1"><i class="fas fa-user-shield"></i></span><div class="info-box-content"><span class="info-box-text">Agentes de Pessoal Ativos</span><span class="info-box-number">{{ total_agentes }}</span></div></div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <div class="info-box mb-3"><span class="info-box-icon bg-warning elevation-1"><i class="fas fa-building"></i></span><div class="info-box-content"><span class="info-box-text">Unidades Ativas Cadastradas</span><span class="info-box-number">{{ total_unidades }}</span></div></div>
+    </div>
+     <div class="col-12 col-sm-6 col-md-3">
+        <div class="info-box mb-3"><span class="info-box-icon bg-success elevation-1"><i class="fas fa-history"></i></span><div class="info-box-content"><span class="info-box-text">Ações de Auditoria Registradas</span><span class="info-box-number">{{ total_logs|default:"0" }}</span></div></div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-rocket mr-2"></i>Ações Rápidas</h3>
+            </div>
+            <div class="card-body text-center">
+                <a href="{% url 'core:listar_usuarios' %}" class="btn btn-app btn-app-lg bg-info"><i class="fas fa-users"></i> Gestão de Usuários</a>
+                <a href="{% url 'core:listar_agentes' %}" class="btn btn-app btn-app-lg bg-success"><i class="fas fa-user-shield"></i> Gestão de Agentes de Pessoal</a>
+                <a href="{% url 'core:listar_unidades' %}" class="btn btn-app btn-app-lg bg-warning"><i class="fas fa-building"></i> Gestão de Unidades</a>
+                <a href="{% url 'core:admin_auditoria' %}" class="btn btn-app btn-app-lg bg-secondary"><i class="fas fa-file-contract"></i> Logs de Auditoria</a>
+            </div>        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card card-info">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar mr-2"></i>Logins na Última Semana</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart">
+                    <canvas id="loginBarChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %} {# Renomeado para extra_js para consistência #}
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<script>
+  $(function () {
+    // Certifique-se de que as variáveis login_chart_labels_json e login_chart_data_json estão corretas
+    var loginChartLabels = JSON.parse('{{ login_chart_labels_json|escapejs }}');
+    var loginChartData = JSON.parse('{{ login_chart_data_json|escapejs }}');
+
+    if (loginChartData && loginChartData.length > 0) {
+        var barChartCanvas = $('#loginBarChart').get(0).getContext('2d');
+        var barChartData = {
+          labels: loginChartLabels,
+          datasets: [{
+              label: 'Logins por Dia',
+              backgroundColor: 'rgba(60,141,188,0.9)',
+              borderColor: 'rgba(60,141,188,0.8)',
+              pointRadius: false,
+              pointColor: '#3b8bba',
+              pointStrokeColor: 'rgba(60,141,188,1)',
+              pointHighlightFill: '#fff',
+              pointHighlightStroke: 'rgba(60,141,188,1)',
+              data: loginChartData
+            }]
+        };
+        var barChartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          datasetFill: false,
+          scales: { 
+            yAxes: [{ 
+                ticks: { 
+                    beginAtZero: true, 
+                    stepSize: 1, // Garante que o eixo Y use números inteiros para contagem
+                    callback: function(value) {if (value % 1 === 0) {return value;}} // Exibe apenas inteiros
+                } 
+            }] 
+          }
+        };
+        new Chart(barChartCanvas, { type: 'bar', data: barChartData, options: barChartOptions });
+    } else {
+        $('#loginBarChart').parent().html('<p class="text-center mt-5">Não há dados de login para exibir o gráfico na última semana.</p>');
+    }
+  });
+</script>
+{% endblock %}

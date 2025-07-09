@@ -1,0 +1,161 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Gerenciar Ponto: {{ servidor.nome }}{% endblock %}
+{% block page_title_header %}Gerenciar Ponto: {{ servidor.nome }}{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        {# O botão de voltar agora se baseia no perfil do usuário logado #}
+        {% if request.user.perfil == 'Administrador Geral' %}
+            <a href="{% url 'core:admin_historico_folhas' servidor.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left mr-1"></i> Voltar ao Histórico
+            </a>
+        {% elif request.user.perfil == 'Agente de Pessoal' %}
+             <a href="{% url 'core:agente_historico_folhas' servidor.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left mr-1"></i> Voltar ao Histórico
+            </a>
+        {% else %} {# Para outros perfis que possam ver a folha, mas não editar #}
+            <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left mr-1"></i> Voltar
+            </a>
+        {% endif %}
+    </div>
+    {# Botão "Aplicar Ocorrência em Lote" só aparece se a folha não estiver arquivada #}
+    {% if folha_ponto.status != 'Arquivada' %}
+    <div>
+        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-bloqueio-lote">
+            <i class="fas fa-calendar-check mr-1"></i> Aplicar Ocorrência em Lote
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-edit mr-1"></i>
+            {{ folha_ponto.get_trimestre_display }} de {{ folha_ponto.ano }}
+            {% if folha_ponto.status == 'Arquivada' %}
+                <span class="badge badge-secondary ml-2">Arquivada</span>
+            {% elif folha_ponto.status == 'Concluída' %}
+                <span class="badge badge-success ml-2">Concluída</span>
+            {% else %}
+                <span class="badge badge-warning ml-2">Em Andamento</span>
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        {# Mensagem de aviso se a folha estiver arquivada e não puder ser editada #}
+        {% if not pode_editar %}
+        <div class="alert alert-info text-center">
+            Esta folha de ponto está arquivada e não pode ser editada. Para fazer alterações, desarquive-a na tela de "Folhas Arquivadas".
+        </div>
+        {% endif %}
+
+        <div class="row">
+            {% for mes_data in meses %} {# Renomeado para mes_data para evitar conflito #}
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ mes_data.nome_mes }}</h4>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                {% for dia in mes_data.dias %}
+                                <tr>
+                                    {# COLUNA 1: DIA E ÍCONES DE STATUS #}
+                                    <td class="text-center align-middle" style="width: 60px;">
+                                        <strong>{{ dia.data_dia|date:"d" }}</strong>
+                                        <div class="mt-1">
+                                            {% if dia.servidor_assinou %}
+                                                <span class="badge badge-info" title="Assinado por: {{ dia.folha.servidor.get_full_display }}"><i class="fas fa-check"></i></span>
+                                            {% endif %}
+                                            {% if dia.delegado_conferiu %}
+                                                <span class="badge badge-success" title="Conferido por: {{ dia.delegado.get_full_display }}"><i class="fas fa-check-double"></i></span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    
+                                    {# COLUNA 2: FORMULÁRIO COM DROPDOWN E BOTÃO SALVAR #}
+                                    <td class="py-1 align-middle">
+                                        {# O formulário só aparece se a folha puder ser editada #}
+                                        {% if pode_editar %}
+                                        <form action="{% url 'core:bloquear_dia' %}" method="post" class="d-flex">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="dia_id" value="{{ dia.id }}">
+                                            <input type="hidden" name="folha_id" value="{{ folha_ponto.id }}">
+                                            <select name="codigo" class="form-control form-control-sm flex-grow-1">
+                                                {% for codigo in codigos_ocorrencia %}
+                                                    <option value="{{ codigo.id }}" {% if codigo.id == dia.codigo.id %}selected{% endif %}>
+                                                        {{ codigo.denominacao }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn btn-xs btn-primary ml-1" title="Salvar alteração do dia">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </form>
+                                        {% else %} {# Se não puder editar, apenas exibe a ocorrência #}
+                                            <span class="form-control form-control-sm border-0">{{ dia.codigo.denominacao }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{# Modal para Aplicar Ocorrência em Lote #}
+<div class="modal fade" id="modal-bloqueio-lote">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Aplicar Ocorrência em Lote</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{% url 'core:bloquear_dias_em_lote' folha_ponto.id %}" method="post"> {# Ajustado para usar namespace #}
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Selecione a ocorrência e o período para aplicar a todos os dias do servidor <strong>{{ servidor.nome }}</strong>.</p>
+                    <hr>
+                    <div class="form-group">
+                        <label for="codigo_lote">Ocorrência</label>
+                        <select name="codigo_lote" id="codigo_lote" class="form-control" required>
+                            <option value="" selected disabled>--- Selecione uma ocorrência ---</option>
+                            {% for codigo in codigos_ocorrencia %}
+                                {% if codigo.codigo.lower not in "livre,sábado,domingo" %} {# Exclui de forma case-insensitive #}
+                                <option value="{{ codigo.id }}">{{ codigo.codigo }} - {{ codigo.denominacao }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="data_inicio_lote">Data de Início</label>
+                        <input type="date" name="data_inicio_lote" id="data_inicio_lote" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="data_fim_lote">Data de Fim</label>
+                        <input type="date" name="data_fim_lote" id="data_fim_lote" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Aplicar em Lote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

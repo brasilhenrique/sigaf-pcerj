@@ -1,0 +1,52 @@
+{% extends 'base_adminlte.html' %}
+
+{% block title %}Dashboard do Delegado{% endblock %}
+
+{% block page_title %}Dashboard de Pendências{% endblock %}
+{% block page_title_header %}Dashboard de Pendências{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="card card-danger card-outline">
+    <div class="card-header">
+        <h3 class="card-title">Servidores com Pendências de Conferência na sua Lotação</h3>
+    </div>
+    <div class="card-body p-0">
+        {% if folhas_pendentes %} {# Alterado para usar folhas_pendentes diretamente #}
+            <table class="table table-hover mb-0"> {# Adicionado mb-0 #}
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Servidor</th>
+                        <th style="width: 40%;">Período da Folha</th>
+                        <th style="width: 20%;" class="text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for folha in folhas_pendentes %} {# Itera diretamente sobre as folhas #}
+                        <tr>
+                            <td>
+                                <strong>{{ folha.servidor.nome }}</strong><br>
+                                <small class="text-muted">ID nº {{ folha.servidor.id_funcional }}</small>
+                            </td>
+                            <td>{{ folha.get_trimestre_display }} de {{ folha.ano }}</td>
+                            <td class="text-center align-middle">
+                                {% if folha.servidor == request.user %}
+                                    {# Delegado acessando sua própria folha com pendências #}
+                                    <a href="{% url 'core:delegado_minha_folha' %}" class="btn btn-sm btn-warning" title="Conferir Minha Folha">Conferir Minha Folha</a> {# Ajustado para usar namespace #}
+                                {% else %}
+                                    {# Delegado acessando folha de outro servidor #}
+                                    <a href="{% url 'core:delegado_ver_folha' folha.id %}" class="btn btn-sm btn-danger" title="Conferir Folha">Conferir Folha</a> {# Ajustado para usar namespace #}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-success m-3 text-center">
+                <h4><i class="icon fas fa-check"></i> Tudo em ordem!</h4>
+                Nenhum servidor na sua lotação possui folhas de ponto pendentes de conferência.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

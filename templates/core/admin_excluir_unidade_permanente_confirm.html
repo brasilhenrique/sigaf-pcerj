@@ -1,0 +1,32 @@
+{% extends 'base_adminlte.html' %} {# Alterado para estender base_adminlte.html #}
+
+{% block title %}Confirmar Exclusão Permanente de Unidade{% endblock %}
+
+{% block page_title %}Excluir Permanentemente Unidade{% endblock %} {# Ajustado para o título da página #}
+{% block page_title_header %}Excluir Permanentemente Unidade{% endblock %} {# Adicionado para AdminLTE #}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-danger"> {# Usando card-danger para destaque #}
+            <div class="card-header">
+                <h3 class="card-title">ATENÇÃO! AÇÃO IRREVERSÍVEL!</h3>
+            </div>
+            <div class="card-body">
+                <p>Você está prestes a apagar permanentemente a unidade <strong>{{ unidade.nome_unidade }}</strong>.</p>
+                <p class="text-danger font-weight-bold">Esta ação só será possível se não houver mais nenhum usuário lotado nesta unidade.</p>
+                <p>Se houver usuários, a lotação deles será removida (definida como 'N/A') caso a configuração do banco de dados permita.</p>
+                <hr>
+                <p class="mb-0">Uma vez excluída, não será possível recuperar esta unidade ou qualquer dado diretamente vinculado a ela. Prossiga somente se tiver absoluta certeza.</p>
+            </div>
+            <div class="card-footer text-right">
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <a href="{% url 'core:listar_unidades' %}" class="btn btn-secondary">Cancelar e Voltar</a> {# Ajustado para usar namespace #}
+                    <button type="submit" class="btn btn-danger">Eu entendo os riscos. Excluir Permanentemente.</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

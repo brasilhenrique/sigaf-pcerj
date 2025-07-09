@@ -1,0 +1,105 @@
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Logs de Auditoria{% endblock %}
+{% block page_title_header %}Logs de Auditoria{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+    <a href="{% url 'core:admin_geral_dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Registros de Auditoria do Sistema</h3>
+    </div>
+    <div class="card-body">
+        <form method="get" class="mb-4 p-3 border bg-light">
+            <div class="row">
+                <div class="form-group col-md-3">
+                    <label for="id_usuario">Usuário</label>
+                    <select name="usuario" id="id_usuario" class="form-control">
+                        <option value="">Todos</option>
+                        {% for u in usuarios_para_filtro %}
+                            <option value="{{ u.id }}" {% if filtro_aplicado.usuario == u.id %}selected{% endif %}>{{ u.get_display_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-3">
+                    {# ALTERAÇÃO REALIZADA AQUI: Input de texto para Select (Dropdown) #}
+                    <label for="id_acao">Ação</label>
+                    <select name="acao" id="id_acao" class="form-control">
+                        <option value="">Todas as Ações</option>
+                        {% for acao_choice in acoes_disponiveis %}
+                            <option value="{{ acao_choice }}" {% if filtro_aplicado.acao == acao_choice %}selected{% endif %}>{{ acao_choice }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="id_data_inicio">Data de Início</label>
+                    <input type="date" name="data_inicio" id="id_data_inicio" class="form-control" value="{{ filtro_aplicado.data_inicio }}">
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="id_data_fim">Data de Fim</label>
+                    <input type="date" name="data_fim" id="id_data_fim" class="form-control" value="{{ filtro_aplicado.data_fim }}">
+                </div>
+                <div class="form-group col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-search"></i> Filtrar</button>
+                </div>
+            </div>
+        </form>
+
+        <table class="table table-bordered table-striped table-sm">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Data/Hora</th>
+                    <th style="width: 20%;">Usuário</th>
+                    <th style="width: 15%;">Ação</th>
+                    <th style="width: 10%;">IP</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                <tr>
+                    <td>{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ log.usuario.nome|default:"Sistema" }}</td>
+                    <td><span class="badge badge-info">{{ log.acao }}</span></td>
+                    <td>{{ log.ip_address|default:"N/A" }}</td>
+                    <td>
+                        {# REVERTIDO: Exibe os detalhes brutos ou um traço #}
+                        <pre style="white-space: pre-wrap; word-break: break-all; background-color: #f8f9fa; border: none; padding: 0;">{{ log.detalhes|default:"-" }}</pre>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">Nenhum log encontrado para os filtros aplicados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1&usuario={{ filtro_aplicado.usuario }}&acao={{ filtro_aplicado.acao }}&data_inicio={{ filtro_aplicado.data_inicio }}&data_fim={{ filtro_aplicado.data_fim }}">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&usuario={{ filtro_aplicado.usuario }}&acao={{ filtro_aplicado.acao }}&data_inicio={{ filtro_aplicado.data_inicio }}&data_fim={{ filtro_aplicado.data_fim }}">Anterior</a></li>
+            {% endif %}
+
+            <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.</span></li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&usuario={{ filtro_aplicado.usuario }}&acao={{ filtro_aplicado.acao }}&data_inicio={{ filtro_aplicado.data_inicio }}&data_fim={{ filtro_aplicado.data_fim }}">Próxima</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&usuario={{ filtro_aplicado.usuario }}&acao={{ filtro_aplicado.acao }}&data_inicio={{ filtro_aplicado.data_inicio }}&data_fim={{ filtro_aplicado.data_fim }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}{% endblock extra_js %} {# Certifique-se de que este bloco está vazio ou removido #}
+{% block custom_js_auditoria %}{% endblock custom_js_auditoria %} {# Certifique-se de que este bloco está vazio ou removido #}
