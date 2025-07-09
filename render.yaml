@@ -1,9 +1,10 @@
-# ARQUIVO: render.yaml (VERSÃO CORRIGIDA)
+# ARQUIVO: render.yaml (VERSÃO CORRIGIDA FINAL)
 
 services:
   # Serviço 1: Banco de Dados PostgreSQL
-  - type: psql  # <-- CORREÇÃO AQUI
+  - type: db      # <-- CORREÇÃO FINAL
     name: sigaf-db
+    # O bloco 'postgres' abaixo já diz ao Render que é um PostgreSQL
     postgres:
       majorVersion: 15
       port: 5432
@@ -19,11 +20,11 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: sigaf_project.settings.production
       - key: PYTHON_VERSION
-        value: 3.11.9 # Ajuste para uma versão suportada pelo Render se necessário
+        value: 3.11.9
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
         fromService:
-          type: psql  # <-- CORREÇÃO AQUI
+          type: db  # <-- CORREÇÃO FINAL
           name: sigaf-db
           property: connectionString
