@@ -1,30 +1,29 @@
-# ARQUIVO: render.yaml
+# ARQUIVO: render.yaml (VERSÃO CORRIGIDA)
 
-# Define os serviços que compõem a nossa aplicação
 services:
   # Serviço 1: Banco de Dados PostgreSQL
-  - type: pgbouncer
+  - type: psql  # <-- CORREÇÃO AQUI
     name: sigaf-db
     postgres:
-      majorVersion: 15 # Usaremos a versão 15 do PostgreSQL
+      majorVersion: 15
       port: 5432
 
   # Serviço 2: A Aplicação Web (Django)
   - type: web
     name: sigaf-web
-    env: python # Define o ambiente como Python
-    plan: free # Especifica que queremos usar o plano gratuito
-    buildCommand: "./build.sh" # Diz ao Render para executar nosso script de build
-    startCommand: "gunicorn sigaf_project.wsgi:application" # Comando para iniciar o servidor de produção
+    env: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn sigaf_project.wsgi:application"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
-        value: sigaf_project.settings.production # Diz ao Django para usar as configurações de produção
+        value: sigaf_project.settings.production
       - key: PYTHON_VERSION
-        value: 3.11.9 # Especifica a versão do Python
+        value: 3.11.9 # Ajuste para uma versão suportada pelo Render se necessário
       - key: DJANGO_SECRET_KEY
-        generateValue: true # Pede ao Render para gerar uma SECRET_KEY segura e automática
+        generateValue: true
       - key: DATABASE_URL
         fromService:
-          type: pgbouncer
+          type: psql  # <-- CORREÇÃO AQUI
           name: sigaf-db
-          property: connectionString # Pega a URL do banco de dados criado acima e a injeta como variável de ambiente
+          property: connectionString
