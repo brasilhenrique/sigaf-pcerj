@@ -2,12 +2,11 @@
 
 from .base import *
 import os
-import dj_database_url # Usado para configurar o DB a partir da URL do Render
+import dj_database_url
 
 # Configurações para o ambiente de PRODUÇÃO
 DEBUG = False
 
-# A SECRET_KEY será lida de uma variável de ambiente no servidor do Render
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # O Render define o hostname automaticamente
@@ -20,11 +19,24 @@ else:
 # Configuração do banco de dados PostgreSQL do Render
 DATABASES = {
     'default': dj_database_url.config(
-        # Render fornece a URL completa do banco de dados em uma variável de ambiente
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600
     )
 }
 
+# --- INÍCIO DA ALTERAÇÃO WHITENOISE ---
+
+# Adiciona o middleware do WhiteNoise. A posição é importante: logo após o SecurityMiddleware.
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
 # Configuração para arquivos estáticos em produção
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Configuração do armazenamento do WhiteNoise
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# --- FIM DA ALTERAÇÃO WHITENOISE ---
