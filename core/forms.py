@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\forms.py (COMPLETO E CORRIGIDO - REMOÇÃO DOS CAMPOS DE SENHA NA CRIAÇÃO DE USUÁRIO ADMIN)
+# ARQUIVO: core/forms.py (VERSÃO CORRIGIDA)
 
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm, UserChangeForm
@@ -51,42 +51,39 @@ class AplicarOcorrenciaLoteForm(forms.Form):
     data_inicio_lote = forms.DateField(label="Data de Início", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
     data_fim_lote = forms.DateField(label="Data de Fim", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
 
-# Formulário de Criação de Usuário (usado pelo Agente e Admin Geral)
 class UsuarioCreationForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['id_funcional', 'nome', 'email', 'perfil', 'lotacao']
     
     def __init__(self, *args, **kwargs):
+        # O request é injetado pela view para filtrar a lotação para o Agente
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): 
             field.widget.attrs['class'] = 'form-control'
-        if 'request' in kwargs and kwargs['request'].user.perfil == 'Agente de Pessoal':
-            self.fields['lotacao'].queryset = kwargs['request'].user.unidades_gerenciadas.filter(ativo=True)
-        if 'username' in self.fields: # Mantido, embora não seja o problema principal aqui
-            del self.fields['username']
-
+        if request and request.user.perfil == 'Agente de Pessoal':
+            self.fields['lotacao'].queryset = request.user.unidades_gerenciadas.filter(ativo=True)
+        
     def save(self, commit=True):
         user = super().save(commit=False)
         if not user.pk or not user.password: 
             user.set_password(user.id_funcional)
-        
-        user.username = user.id_funcional 
-
+        user.username = user.id_funcional
         if commit: 
             user.save()
         return user
 
-# Formulário de Alteração de Usuário (usado pelo Agente)
 class UsuarioChangeForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'perfil', 'lotacao', 'status_servidor']
     def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): field.widget.attrs['class'] = 'form-control'
-        if 'request' in kwargs and kwargs['request'].user.perfil == 'Agente de Pessoal':
-            self.fields['lotacao'].queryset = kwargs['request'].user.unidades_gerenciadas.filter(ativo=True)
+        if request and request.user.perfil == 'Agente de Pessoal':
+            self.fields['lotacao'].queryset = request.user.unidades_gerenciadas.filter(ativo=True)
 
 class TransferenciaForm(forms.ModelForm):
     class Meta:
@@ -98,7 +95,6 @@ class TransferenciaForm(forms.ModelForm):
         self.fields['unidade_destino'].queryset = Unidade.objects.filter(ativo=True)
         self.fields['unidade_destino'].widget.attrs.update({'class': 'form-control'})
 
-# FORMULÁRIO PARA A GERAÇÃO DE PDF POR UNIDADE
 class GerarPdfUnidadeForm(forms.Form):
     unidade = forms.ModelChoiceField(queryset=Unidade.objects.filter(ativo=True), label="Unidade", widget=forms.Select(attrs={'class': 'form-control'}))
     ano = forms.IntegerField(initial=date.today().year, label="Ano", widget=forms.NumberInput(attrs={'class': 'form-control'}))
@@ -110,7 +106,6 @@ class GerarPdfUnidadeForm(forms.Form):
         if user and user.perfil == 'Agente de Pessoal':
             self.fields['unidade'].queryset = user.unidades_gerenciadas.all()
 
-# FORMULÁRIOS DO MÓDULO ADMIN
 class UnidadeForm(forms.ModelForm):
     class Meta:
         model = Unidade
@@ -134,18 +129,13 @@ class AdminAgenteCreationForm(forms.ModelForm):
             if not isinstance(field.widget, forms.CheckboxSelectMultiple): 
                 field.widget.attrs['class'] = 'form-control'
         self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
-        if 'username' in self.fields:
-            del self.fields['username']
-
 
     def save(self, commit=True):
         user = super().save(commit=False)
         if not user.pk or not user.password: 
             user.set_password(user.id_funcional)
-        
         user.perfil = 'Agente de Pessoal' 
-        user.username = user.id_funcional 
-
+        user.username = user.id_funcional
         if commit: 
             user.save()
             self.save_m2m()
@@ -161,6 +151,7 @@ class AdminAgenteChangeForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'lotacao', 'unidades_gerenciadas', 'ativo']
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items():
@@ -168,33 +159,35 @@ class AdminAgenteChangeForm(forms.ModelForm):
                 field.widget.attrs['class'] = 'form-control'
         self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
 
-
-# CORREÇÃO AQUI: AdminUsuarioCreationForm agora herda de forms.ModelForm
-# e define os campos manualmente, evitando a necessidade de campos de senha
 class AdminUsuarioCreationForm(forms.ModelForm):
     class Meta:
         model = Usuario
-        fields = ('id_funcional', 'nome', 'email', 'perfil', 'lotacao') # Remove 'password' fields implicitly
-    
+        fields = ('id_funcional', 'nome', 'email', 'perfil', 'lotacao')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): 
             field.widget.attrs['class'] = 'form-control'
         self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
-        # Removido del self.fields['username'] daqui porque não herda mais de UserCreationForm,
-        # então o campo username não seria adicionado por padrão.
-        # Ele será definido no save.
+        
+        # *** CORREÇÃO AQUI ***
+        # Filtra as opções do campo 'perfil'
+        perfil_field = self.fields.get('perfil')
+        if perfil_field:
+            # Obtém todas as escolhas, mas remove as que não queremos
+            all_choices = dict(Usuario.PERFIL_CHOICES)
+            allowed_choices = {k: v for k, v in all_choices.items() if k in ['Servidor', 'Delegado']}
+            perfil_field.choices = list(allowed_choices.items())
+            # O ideal seria usar forms.ChoiceField(choices=...) mas isso já resolve
+            # Ou, se for um ModelChoiceField, filtrar o queryset.
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # Define a senha inicial como o ID Funcional
         user.set_password(user.id_funcional)
-        # Garante que o username (campo herdado de AbstractUser) seja o id_funcional
         user.username = user.id_funcional
         if commit:
             user.save()
         return user
-
 
 class AdminUsuarioChangeForm(UserChangeForm):
     password = None 
@@ -210,6 +203,6 @@ class AdminProfileForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nome', 'email']
-    def __init__(self, *args, **kwargs): # CORREÇÃO: Removido o typo
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): field.widget.attrs['class'] = 'form-control'
