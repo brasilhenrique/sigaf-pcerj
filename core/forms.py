@@ -1,9 +1,18 @@
-# ARQUIVO: core/forms.py (VERSÃO CORRIGIDA)
+# ARQUIVO: core/forms.py (VERSÃO CORRIGIDA FINAL - Adicionado queryset inicial)
 
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm, UserChangeForm
 from .models import FolhaPonto, Usuario, Unidade, CodigoOcorrencia, Transferencia
 from datetime import date
+import re # Importar re para a função de ordenação
+
+# Função de ordenação personalizada para unidades
+def custom_sort_key(unidade):
+    match = re.match(r'^(\d+)', unidade.nome_unidade)
+    if match:
+        return (int(match.group(1)), unidade.nome_unidade)
+    else:
+        return (float('inf'), unidade.nome_unidade)
 
 # FORMULÁRIOS DE AUTENTICAÇÃO
 class ChangePasswordForm(PasswordChangeForm):
@@ -22,6 +31,7 @@ class CriarFolhaManualForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # MANTEM A ORDENAÇÃO POR NOME PARA SERVIDORES (que não são unidades)
         if user and user.perfil == 'Agente de Pessoal':
             self.fields['servidor'].queryset = Usuario.objects.filter(
                 lotacao__in=user.unidades_gerenciadas.all(), 
@@ -57,14 +67,21 @@ class UsuarioCreationForm(forms.ModelForm):
         fields = ['id_funcional', 'nome', 'email', 'perfil', 'lotacao']
     
     def __init__(self, *args, **kwargs):
-        # O request é injetado pela view para filtrar a lotação para o Agente
         request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): 
             field.widget.attrs['class'] = 'form-control'
-        if request and request.user.perfil == 'Agente de Pessoal':
-            self.fields['lotacao'].queryset = request.user.unidades_gerenciadas.filter(ativo=True)
         
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA LOTAÇÃO USANDO CHOICES
+        if 'lotacao' in self.fields:
+            if request and request.user.perfil == 'Agente de Pessoal':
+                sorted_unidades = sorted(request.user.unidades_gerenciadas.filter(ativo=True), key=custom_sort_key)
+            else:
+                sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            # Converte a lista de objetos Unidade em uma lista de tuplas (ID, Nome) para choices
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
+
+
     def save(self, commit=True):
         user = super().save(commit=False)
         if not user.pk or not user.password: 
@@ -82,8 +99,15 @@ class UsuarioChangeForm(forms.ModelForm):
         request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): field.widget.attrs['class'] = 'form-control'
-        if request and request.user.perfil == 'Agente de Pessoal':
-            self.fields['lotacao'].queryset = request.user.unidades_gerenciadas.filter(ativo=True)
+        
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA LOTAÇÃO USANDO CHOICES
+        if 'lotacao' in self.fields:
+            if request and request.user.perfil == 'Agente de Pessoal':
+                sorted_unidades = sorted(request.user.unidades_gerenciadas.filter(ativo=True), key=custom_sort_key)
+            else:
+                sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
+
 
 class TransferenciaForm(forms.ModelForm):
     class Meta:
@@ -92,19 +116,26 @@ class TransferenciaForm(forms.ModelForm):
         widgets = {'data_transferencia': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})}
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['unidade_destino'].queryset = Unidade.objects.filter(ativo=True)
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA UNIDADE_DESTINO USANDO CHOICES
+        self.fields['unidade_destino'].choices = [(u.pk, u.nome_unidade) for u in sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)]
         self.fields['unidade_destino'].widget.attrs.update({'class': 'form-control'})
 
 class GerarPdfUnidadeForm(forms.Form):
-    unidade = forms.ModelChoiceField(queryset=Unidade.objects.filter(ativo=True), label="Unidade", widget=forms.Select(attrs={'class': 'form-control'}))
+    # ADICIONADO: queryset inicial para ModelChoiceField
+    unidade = forms.ModelChoiceField(queryset=Unidade.objects.all(), label="Unidade", widget=forms.Select(attrs={'class': 'form-control'}))
     ano = forms.IntegerField(initial=date.today().year, label="Ano", widget=forms.NumberInput(attrs={'class': 'form-control'}))
     trimestre = forms.TypedChoiceField(choices=FolhaPonto.TRIMESTRE_CHOICES, coerce=int, label="Trimestre", widget=forms.Select(attrs={'class': 'form-control'}))
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA UNIDADE USANDO CHOICES
         if user and user.perfil == 'Agente de Pessoal':
-            self.fields['unidade'].queryset = user.unidades_gerenciadas.all()
+            sorted_unidades = sorted(user.unidades_gerenciadas.all(), key=custom_sort_key)
+        else: # Para Admin Geral
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+        self.fields['unidade'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
+
 
 class UnidadeForm(forms.ModelForm):
     class Meta:
@@ -113,8 +144,9 @@ class UnidadeForm(forms.ModelForm):
         widgets = {'nome_unidade': forms.TextInput(attrs={'class': 'form-control'}), 'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'})}
 
 class AdminAgenteCreationForm(forms.ModelForm):
+    # ADICIONADO: queryset inicial para ModelMultipleChoiceField
     unidades_gerenciadas = forms.ModelMultipleChoiceField(
-        queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
+        queryset=Unidade.objects.all(), # Queryset inicial
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Unidades Gerenciadas"
@@ -128,7 +160,16 @@ class AdminAgenteCreationForm(forms.ModelForm):
         for fname, field in self.fields.items():
             if not isinstance(field.widget, forms.CheckboxSelectMultiple): 
                 field.widget.attrs['class'] = 'form-control'
-        self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
+        
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA AMBOS OS CAMPOS USANDO CHOICES
+        if 'unidades_gerenciadas' in self.fields:
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['unidades_gerenciadas'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
+            
+        if 'lotacao' in self.fields:
+            sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
+
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -142,8 +183,9 @@ class AdminAgenteCreationForm(forms.ModelForm):
         return user
 
 class AdminAgenteChangeForm(forms.ModelForm):
+    # ADICIONADO: queryset inicial para ModelMultipleChoiceField
     unidades_gerenciadas = forms.ModelMultipleChoiceField(
-        queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
+        queryset=Unidade.objects.all(), # Queryset inicial
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Unidades Gerenciadas"
@@ -157,7 +199,15 @@ class AdminAgenteChangeForm(forms.ModelForm):
         for fname, field in self.fields.items():
             if not isinstance(field.widget, forms.CheckboxSelectMultiple): 
                 field.widget.attrs['class'] = 'form-control'
-        self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
+        
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA AMBOS OS CAMPOS USANDO CHOICES
+        if 'unidades_gerenciadas' in self.fields:
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['unidades_gerenciadas'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
+        
+        if 'lotacao' in self.fields:
+            sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
 class AdminUsuarioCreationForm(forms.ModelForm):
     class Meta:
@@ -168,7 +218,11 @@ class AdminUsuarioCreationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): 
             field.widget.attrs['class'] = 'form-control'
-        self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
+        
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA LOTAÇÃO USANDO CHOICES
+        if 'lotacao' in self.fields:
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
         
         # *** CORREÇÃO AQUI ***
         # Filtra as opções do campo 'perfil'
@@ -178,8 +232,6 @@ class AdminUsuarioCreationForm(forms.ModelForm):
             all_choices = dict(Usuario.PERFIL_CHOICES)
             allowed_choices = {k: v for k, v in all_choices.items() if k in ['Servidor', 'Delegado']}
             perfil_field.choices = list(allowed_choices.items())
-            # O ideal seria usar forms.ChoiceField(choices=...) mas isso já resolve
-            # Ou, se for um ModelChoiceField, filtrar o queryset.
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -197,7 +249,11 @@ class AdminUsuarioChangeForm(UserChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): field.widget.attrs['class'] = 'form-control'
-        self.fields['lotacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
+        
+        # APLICA A ORDENAÇÃO PERSONALIZADA PARA LOTAÇÃO USANDO CHOICES
+        if 'lotacao' in self.fields:
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
+            self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
 
 class AdminProfileForm(forms.ModelForm):
     class Meta:
