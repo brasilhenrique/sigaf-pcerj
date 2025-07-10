@@ -17,7 +17,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'sigaf_db',
         'USER': 'sigaf_user',
-        'PASSWORD': 'a_senha_forte_que_voce_anotou', # <-- ATENÇÃO: COLOQUE A SENHA CORRETA AQUI
+        'PASSWORD': 'mKfL%5f3qL', # <-- SENHA CORRIGIDA AQUI
         'HOST': 'localhost',
         'PORT': '5432',
     }
