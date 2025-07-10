@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\views\servidor_views.py (COMPLETO E CORRIGIDO - REDIRECIONAMENTO DE FOLHA ÚNICA)
+# ARQUIVO: core/views/servidor_views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -18,67 +18,51 @@ def dashboard_view(request):
     Exibe a folha de ponto pessoal do usuário, a menos que seja Administrador Geral (sem folha).
     Se houver apenas UMA folha de ponto ativa, redireciona diretamente para ela.
     """
-    # Redirecionamento para dashboards específicos de gestão (apenas Admin Geral)
     if request.user.perfil == 'Administrador Geral':
         return redirect('core:admin_geral_dashboard')
     
-    # Para Servidor, Agente de Pessoal e Delegado, esta view exibirá a folha de ponto pessoal.
     hoje = date.today()
     trimestre_atual = (hoje.month - 1) // 3 + 1
     
     folhas_do_usuario_queryset = FolhaPonto.objects.filter(
         servidor=request.user,
-        status__in=['Em Andamento', 'Concluída'] # Considera apenas folhas ativas (não arquivadas)
+        status__in=['Em Andamento', 'Concluída']
     ).order_by('-ano', '-trimestre')
 
-    # NOVA LÓGICA: Contar as folhas e redirecionar se houver apenas uma
     num_folhas_ativas = folhas_do_usuario_queryset.count()
 
     if num_folhas_ativas == 0:
         messages.info(request, "Nenhuma folha de ponto ativa encontrada para você no momento.")
-        # Renderiza o template com a mensagem de 'empty'
-        context = { 'folhas_com_dados': [] } # Passa uma lista vazia para o template
+        context = { 'folhas_com_dados': [] }
         return render(request, 'core/dashboard.html', context)
     
     elif num_folhas_ativas == 1:
-        # Se houver apenas uma folha, redireciona diretamente para a tela de gerenciamento/visualização
         folha_unica = folhas_do_usuario_queryset.first()
         
-        # Redireciona para a tela de gerenciamento se o usuário for Agente
-        # ou para a tela de conferência se for Delegado conferindo a própria
-        # ou para a tela padrão de dashboard para Servidor.
-        if request.user.perfil == 'Agente de Pessoal':
-            # Um agente gerencia suas folhas, então redireciona para a tela de gerenciar_ponto
-            return redirect('core:gerenciar_ponto', folha_id=folha_unica.id)
-        elif request.user.perfil == 'Delegado':
-            # Um delegado confere sua própria folha, então redireciona para delegado_minha_folha
-            return redirect('core:delegado_minha_folha') # delegado_minha_folha já carrega a folha do request.user
-            # Ou poderia ser redirect('core:delegado_ver_folha', folha_id=folha_unica.id) se essa fosse a tela padrão de visualização para delegados
-        else: # Servidor
-            # Servidor vê sua própria folha no dashboard padrão, então não precisa de redirecionamento extra aqui,
-            # apenas continua o fluxo normal da view para renderizar.
-            pass # Continua para a lógica abaixo que prepara os dados e renderiza 'core/dashboard.html'
+        # *** INÍCIO DA CORREÇÃO ***
+        # Removemos o redirecionamento incorreto para Agente de Pessoal.
+        # Agora, ao clicar em "Minha Folha de Ponto", ele será tratado como um Servidor,
+        # seguindo o fluxo normal para a tela de assinatura.
+        if request.user.perfil == 'Delegado':
+            return redirect('core:delegado_minha_folha')
+        # *** FIM DA CORREÇÃO ***
     
-    # Lógica para mais de uma folha OU para Servidor com uma única folha (continua o fluxo normal)
+    # Lógica para mais de uma folha OU para Servidor/Agente com uma única folha
     folhas_com_dados = []
-    for folha in folhas_do_usuario_queryset: # Usa o queryset já filtrado
+    for folha in folhas_do_usuario_queryset:
         meses_preparados_para_web = preparar_dados_para_web(folha)
         
         for mes_data in meses_preparados_para_web:
             mes_dias = mes_data['dias']
-            mes_num = mes_data['mes_num']
             
-            pode_assinar_mes = any(
+            mes_data['pode_assinar_mes'] = any(
                 d.codigo.codigo.lower() == 'livre' and not d.servidor_assinou and not d.delegado_conferiu
                 for d in mes_dias
             )
-            mes_data['pode_assinar_mes'] = pode_assinar_mes
-
-            totalmente_assinado_no_mes = all(
+            mes_data['totalmente_assinado'] = all(
                 (d.servidor_assinou or d.codigo.codigo.lower() != 'livre') and not d.delegado_conferiu
                 for d in mes_dias
             )
-            mes_data['totalmente_assinado'] = totalmente_assinado_no_mes
             mes_data['totalmente_conferido'] = all(d.delegado_conferiu for d in mes_dias)
         
         folhas_com_dados.append({
@@ -121,7 +105,6 @@ def assinar_dia_view(request):
 
     dia.folha.update_status()
 
-    # registrar_log(request, 'ASSINATURA_DIA', {'dia_id': dia.id, 'data': str(dia.data_dia)})
     messages.success(request, f"Dia {dia.data_dia.strftime('%d/%m')} assinado com sucesso!")
     return redirect(next_url)
 
