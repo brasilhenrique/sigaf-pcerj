@@ -42,6 +42,7 @@ def preparar_dados_para_pdf(folha):
     linhas_tabela = []
     for dia_num in range(1, 32):
         linha_atual = {'dia': str(dia_num).zfill(2), 'meses': []}
+        
         algum_dia_existe_nesta_linha = False
 
         for mes_num in meses_do_trimestre:
@@ -60,6 +61,7 @@ def preparar_dados_para_pdf(folha):
 
 def popular_dias_folha(folha_ponto_instance):
     try:
+        
         cod_livre = CodigoOcorrencia.objects.get(codigo__iexact='Livre')
         cod_sabado = CodigoOcorrencia.objects.get(codigo__iexact='SÁBADO')
         cod_domingo = CodigoOcorrencia.objects.get(codigo__iexact='DOMINGO')
@@ -93,6 +95,7 @@ ACOES_DE_AUDITORIA_ESSENCIAIS = [
     'PASSWORD_CHANGE_SUCCESS',        # Troca de senha
     'FIRST_LOGIN_REDIRECT',           # Primeiro login forçando troca de senha (indica reset)
     'USER_CREATE_BY_AGENTE',          # Criação de usuário por Agente
+    'USER_CREATE_BY_ADMIN',           # NOVO: Criação de usuário por Administrador Geral
     'USER_EDIT_BY_AGENTE',            # Edição de usuário por Agente
     'USER_INACTIVATE_BY_AGENTE',      # Inativação de usuário por Agente
     'USER_REACTIVATE_BY_AGENTE',      # Reativação de usuário por Agente
@@ -102,6 +105,19 @@ ACOES_DE_AUDITORIA_ESSENCIAIS = [
     'DELETE_UNIDADE_PERMANENTE',      # Exclusão PERMANENTE de unidade
     'BLOQUEIO_DIA',                   # Bloqueio de um dia de ponto
     'BLOQUEIO_LOTE',                  # Bloqueio de dias em lote
+    'CRIAR_FOLHA_MANUAL',             # Criação manual de folha por agente
+    'DELETAR_FOLHA',                  # Exclusão (não permanente) de folha por agente
+    'ARQUIVAR_FOLHA',                 # Arquivamento de folha
+    'DESARQUIVAR_FOLHA',              # Desarquivamento de folha
+    'ARQUIVAR_FOLHA_LOTE',            # Arquivamento de folhas em lote
+    'LOGOUT',                         # Saída do sistema
+    'LOGIN_SUCCESS',                  # Login bem-sucedido
+    'UNIDADE_ATIVADA',                # Ativação de unidade
+    'UNIDADE_INATIVADA',              # Inativação de unidade
+    'AGENTE_ATIVADO',                 # Ativação de agente
+    'AGENTE_INATIVADO',               # Inativação de agente
+    'USUARIO_ATIVADO',                # Ativação de usuário
+    'USUARIO_INATIVADO',              # Inativação de usuário
 ]
 
 def registrar_log(request, acao, detalhes=None, ip_address=None):
