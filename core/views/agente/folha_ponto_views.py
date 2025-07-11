@@ -1,4 +1,4 @@
-# ARQUIVO: core/views/agente/folha_ponto_views.py
+# ARQUIVO: core/views/agente/folha_ponto_views.py (ATUALIZADO PARA POLÍTICA RESTRITIVA DE LOG)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -139,12 +139,13 @@ def bloquear_dia_view(request):
     
     dia.folha.update_status()
 
-    registrar_log(request, 'BLOQUEIO_DIA', {
-        'dia_id': dia.id, 
-        'data': str(dia.data_dia), 
-        'codigo_novo': codigo.codigo,
-        'servidor_id': dia.folha.servidor.id_funcional
-    })
+    # LOG: BLOQUEIO_DIA (REMOVIDO PARA POLÍTICA RESTRITIVA)
+    # registrar_log(request, 'BLOQUEIO_DIA', {
+    #     'dia_id': dia.id, 
+    #     'data': str(dia.data_dia), 
+    #     'codigo_novo': codigo.codigo,
+    #     'servidor_id': dia.folha.servidor.id_funcional
+    # })
     
     messages.success(request, f"Ocorrência do dia {dia.data_dia.strftime('%d/%m/%Y')} alterada para '{codigo.denominacao}'.")
     return redirect('core:gerenciar_ponto', folha_id=folha_id) 
@@ -193,15 +194,16 @@ def bloquear_dias_em_lote_view(request, folha_id):
 
         folha.update_status()
 
-        registrar_log(request, 'BLOQUEIO_LOTE', {
-            'folha_id': folha.id,
-            'servidor_id': folha.servidor.id_funcional,
-            'data_inicio': str(data_inicio),
-            'data_fim': str(data_fim),
-            'codigo_novo': codigo_novo.codigo,
-            'dias_alterados': num_dias_alterados,
-            'assinaturas_removidas': dias_removidos_count
-        })
+        # LOG: BLOQUEIO_LOTE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+        # registrar_log(request, 'BLOQUEIO_LOTE', {
+        #     'folha_id': folha.id,
+        #     'servidor_id': folha.servidor.id_funcional,
+        #     'data_inicio': str(data_inicio),
+        #     'data_fim': str(data_fim),
+        #     'codigo_novo': codigo_novo.codigo,
+        #     'dias_alterados': num_dias_alterados,
+        #     'assinaturas_removidas': dias_removidos_count
+        # })
 
         if dias_removidos_count > 0:
             messages.warning(request, f"Assinaturas/conferências de {dias_removidos_count} dia(s) foram removidas devido ao bloqueio em lote.")
@@ -230,6 +232,7 @@ def agente_criar_folha_view(request):
             
             popular_dias_folha(nova_folha)
             messages.success(request, f"Folha de ponto para {nova_folha.servidor.nome} ({nova_folha.get_trimestre_display()} de {nova_folha.ano}) criada com sucesso!")
+            # LOG: CRIAÇÃO DE FOLHA MANUAL
             registrar_log(request, 'CRIAR_FOLHA_MANUAL', {
                 'folha_id': nova_folha.id,
                 'servidor_id': nova_folha.servidor.id_funcional,
@@ -280,12 +283,13 @@ def arquivar_folha_view(request, folha_id):
 
     folha.status = 'Arquivada'
     folha.save()
-    registrar_log(request, 'ARQUIVAR_FOLHA', {
-        'folha_id': folha.id, 
-        'servidor_id': folha.servidor.id_funcional,
-        'trimestre': folha.trimestre,
-        'ano': folha.ano
-    })
+    # LOG: ARQUIVAR_FOLHA (REMOVIDO PARA POLÍTICA RESTRITIVA)
+    # registrar_log(request, 'ARQUIVAR_FOLHA', {
+    #     'folha_id': folha.id, 
+    #     'servidor_id': folha.servidor.id_funcional,
+    #     'trimestre': folha.trimestre,
+    #     'ano': folha.ano
+    # })
     messages.success(request, f"Folha de ponto de {folha.servidor.nome} ({folha.get_trimestre_display()} de {folha.ano}) arquivada com sucesso.")
     return redirect(request.META.get('HTTP_REFERER', 'core:agente_dashboard'))
 
@@ -301,12 +305,13 @@ def desarquivar_folha_view(request, folha_id):
     folha.status = 'Em Andamento' 
     folha.save()
     folha.update_status() 
-    registrar_log(request, 'DESARQUIVAR_FOLHA', {
-        'folha_id': folha.id, 
-        'servidor_id': folha.servidor.id_funcional,
-        'trimestre': folha.trimestre,
-        'ano': folha.ano
-    })
+    # LOG: DESARQUIVAR_FOLHA (REMOVIDO PARA POLÍTICA RESTRITIVA)
+    # registrar_log(request, 'DESARQUIVAR_FOLHA', {
+    #     'folha_id': folha.id, 
+    #     'servidor_id': folha.servidor.id_funcional,
+    #     'trimestre': folha.trimestre,
+    #     'ano': folha.ano
+    # })
     messages.success(request, f"Folha de ponto de {folha.servidor.nome} ({folha.get_trimestre_display()} de {folha.ano}) desarquivada com sucesso.")
     return redirect('core:folhas_arquivadas')
 
@@ -325,12 +330,13 @@ def arquivar_lote_view(request):
     for folha in folhas_para_arquivar:
         folha.status = 'Arquivada'
         folha.save()
-        registrar_log(request, 'ARQUIVAR_FOLHA_LOTE', {
-            'folha_id': folha.id, 
-            'servidor_id': folha.servidor.id_funcional,
-            'trimestre': folha.trimestre,
-            'ano': folha.ano
-        })
+        # LOG: ARQUIVAR_FOLHA_LOTE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+        # registrar_log(request, 'ARQUIVAR_FOLHA_LOTE', {
+        #     'folha_id': folha.id, 
+        #     'servidor_id': folha.servidor.id_funcional,
+        #     'trimestre': folha.trimestre,
+        #     'ano': folha.ano
+        # })
         count_arquivadas += 1
 
     if count_arquivadas > 0:

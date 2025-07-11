@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\views\admin_views.py (VERSÃO ESTÁVEL - SEM DEBUG DE LOGS - ATUALIZADO)
+# F:\dev\sigaf-novo\core\views\admin_views.py (VERSÃO ESTÁVEL - ATUALIZADO PARA POLÍTICA RESTRITIVA DE LOG)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,8 +11,8 @@ from core.forms import UnidadeForm, AdminAgenteCreationForm, AdminAgenteChangeFo
     AdminUsuarioCreationForm, AdminUsuarioChangeForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import date, timedelta
-import json # Mantido porque é usado para o gráfico do dashboard
-from django.db import transaction # Mantido porque é usado para exclusões atômicas
+import json 
+from django.db import transaction 
 from core.utils import registrar_log # Importar registrar_log
 
 # Decorator para garantir que o usuário é Administrador Geral
@@ -40,6 +40,7 @@ def admin_geral_dashboard_view(request):
     total_agentes = Usuario.objects.filter(ativo=True, perfil='Agente de Pessoal').count()
 
     # Lógica para o gráfico de logins na última semana
+    # ATENÇÃO: Se 'LOGIN_SUCCESS' for removido das ações de auditoria, este gráfico não funcionará mais
     hoje = date.today()
     sete_dias_atras = hoje - timedelta(days=6)
 
@@ -65,9 +66,9 @@ def admin_geral_dashboard_view(request):
         'total_usuarios': total_usuarios,
         'total_unidades': total_unidades,
         'total_agentes': total_agentes,
-        'total_logs': LogAuditoria.objects.count(),
-        'login_chart_labels_json': json.dumps(login_chart_labels),
-        'login_chart_data_json': json.dumps(login_chart_data),
+        'total_logs': LogAuditoria.objects.count(), # ATENÇÃO: total_logs será muito menor agora
+        'login_chart_labels_json': json.dumps(login_chart_labels), # Este gráfico será afetado se LOGIN_SUCCESS não for logado
+        'login_chart_data_json': json.dumps(login_chart_data), # Este gráfico será afetado se LOGIN_SUCCESS não for logado
     }
     return render(request, 'core/admin_geral_dashboard.html', context)
 
@@ -75,7 +76,6 @@ def admin_geral_dashboard_view(request):
 # --- Views de Unidade ---
 @admin_required
 def listar_unidades_view(request):
-    # AQUI PODEMOS APLICAR A ORDENAÇÃO CUSTOMIZADA PARA A LISTA TAMBÉM
     unidades_ordenadas = sorted(Unidade.objects.all(), key=custom_sort_key)
     return render(request, 'core/admin_listar_unidades.html', {'unidades': unidades_ordenadas})
 
@@ -84,13 +84,14 @@ def adicionar_unidade_view(request):
     if request.method == 'POST':
         form = UnidadeForm(request.POST)
         if form.is_valid():
-            nova_unidade = form.save() # Captura o objeto salvo
+            nova_unidade = form.save() 
             messages.success(request, 'Unidade adicionada com sucesso!')
-            registrar_log(request, 'UNIDADE_CRIADA', { # REGISTRA LOG PARA CRIAÇÃO DE UNIDADE
-                'unidade_nome': nova_unidade.nome_unidade,
-                'unidade_id': nova_unidade.id,
-                'ativo': nova_unidade.ativo
-            })
+            # LOG: CRIAÇÃO DE UNIDADE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # registrar_log(request, 'UNIDADE_CRIADA', {
+            #     'unidade_nome': nova_unidade.nome_unidade,
+            #     'unidade_id': nova_unidade.id,
+            #     'ativo': nova_unidade.ativo
+            # })
             return redirect('core:listar_unidades')
         else:
             messages.error(request, 'Erro ao adicionar unidade. Por favor, corrija os erros no formulário.')
@@ -104,18 +105,18 @@ def editar_unidade_view(request, unidade_id):
     if request.method == 'POST':
         form = UnidadeForm(request.POST, instance=unidade)
         if form.is_valid():
-            mudancas = {k: {'old': form.initial.get(k), 'new': form.cleaned_data.get(k)} 
+            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))} 
                         for k, v in form.cleaned_data.items() if form.cleaned_data.get(k) != form.initial.get(k)}
             
             form.save()
             messages.success(request, 'Unidade atualizada com sucesso!')
-            # REGISTRA LOG APENAS SE HOUVER MUDANÇAS REAIS
-            if mudancas:
-                registrar_log(request, 'UNIDADE_EDITADA', {
-                    'unidade_nome': unidade.nome_unidade,
-                    'unidade_id': unidade.id,
-                    'mudancas': mudancas
-                })
+            # LOG: EDIÇÃO DE UNIDADE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # if mudancas: 
+            #     registrar_log(request, 'UNIDADE_EDITADA', {
+            #         'unidade_nome': unidade.nome_unidade,
+            #         'unidade_id': unidade.id,
+            #         'mudancas': mudancas
+            #     })
             return redirect('core:listar_unidades')
         else:
             messages.error(request, 'Erro ao atualizar unidade. Por favor, corrija os erros no formulário.')
@@ -133,8 +134,8 @@ def excluir_unidade_permanente_view(request, unidade_id):
             return redirect('core:listar_unidades')
         
         with transaction.atomic():
-            unidade_nome = unidade.nome_unidade # Captura antes de deletar
-            unidade_id_ = unidade.id # Captura antes de deletar
+            unidade_nome = unidade.nome_unidade 
+            unidade_id_ = unidade.id 
             unidade.delete()
             messages.success(request, f"Unidade '{unidade_nome}' excluída permanentemente.")
             registrar_log(request, 'DELETE_UNIDADE_PERMANENTE', {
@@ -148,16 +149,17 @@ def excluir_unidade_permanente_view(request, unidade_id):
 def inativar_unidade_view(request, unidade_id):
     unidade = get_object_or_404(Unidade, id=unidade_id)
     if request.method == 'POST':
-        acao_log = 'UNIDADE_INATIVADA' if unidade.ativo else 'UNIDADE_ATIVADA' # Define a ação antes de mudar o status
+        # LOG: ATIVAÇÃO/INATIVAÇÃO DE UNIDADE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+        # acao_log = 'UNIDADE_INATIVADA' if unidade.ativo else 'UNIDADE_ATIVADA' 
         unidade.ativo = not unidade.ativo
         unidade.save()
         status_mensagem = "ativada" if unidade.ativo else "inativada"
         messages.success(request, f"Unidade '{unidade.nome_unidade}' foi {status_mensagem} com sucesso.")
-        registrar_log(request, acao_log, {
-            'unidade_nome': unidade.nome_unidade,
-            'unidade_id': unidade.id,
-            'status_novo': unidade.ativo
-        })
+        # registrar_log(request, acao_log, {
+        #     'unidade_nome': unidade.nome_unidade,
+        #     'unidade_id': unidade.id,
+        #     'status_novo': unidade.ativo
+        # })
         return redirect('core:listar_unidades')
     
     context = {
@@ -170,7 +172,7 @@ def inativar_unidade_view(request, unidade_id):
 # --- Views de Agente ---
 @admin_required
 def listar_agentes_view(request):
-    agentes_ordenados = sorted(Usuario.objects.filter(perfil='Agente de Pessoal'), key=lambda u: u.nome) # ORDENAÇÃO ALFABÉTICA SIMPLES POR NOME
+    agentes_ordenados = sorted(Usuario.objects.filter(perfil='Agente de Pessoal'), key=lambda u: u.nome) 
     return render(request, 'core/admin_listar_agentes.html', {'agentes': agentes_ordenados})
 
 @admin_required
@@ -178,19 +180,19 @@ def adicionar_agente_view(request):
     if request.method == 'POST':
         form = AdminAgenteCreationForm(request.POST)
         if form.is_valid():
-            novo_agente = form.save() # Captura o objeto salvo
+            novo_agente = form.save() 
             messages.success(request, 'Agente de Pessoal criado com sucesso!')
-            registrar_log(request, 'AGENTE_CRIADO', { # REGISTRA LOG PARA CRIAÇÃO DE AGENTE
-                'agente_id': novo_agente.id_funcional,
-                'agente_nome': novo_agente.nome,
-                'lotacao': novo_agente.lotacao.nome_unidade if novo_agente.lotacao else 'N/A',
-                'unidades_gerenciadas_ids': list(novo_agente.unidades_gerenciadas.values_list('nome_unidade', flat=True))
-            })
+            # LOG: CRIAÇÃO DE AGENTE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # registrar_log(request, 'AGENTE_CRIADO', { 
+            #     'agente_id': novo_agente.id_funcional,
+            #     'agente_nome': novo_agente.nome,
+            #     'lotacao': novo_agente.lotacao.nome_unidade if novo_agente.lotacao else 'N/A',
+            #     'unidades_gerenciadas_ids': list(novo_agente.unidades_gerenciadas.values_list('nome_unidade', flat=True))
+            # })
             return redirect('core:listar_agentes')
         else:
             print("Erros do formulário:", form.errors)
             messages.error(request, 'Erro ao adicionar agente. Por favor, corrija os erros no formulário.')
-            # AQUI JÁ NÃO PRECISA ORDENAR NOVAMENTE, O FORM ADMINAGENTE_CREATION FORM JÁ FAZ ISSO NO __init__
             return render(request, 'core/admin_form_agente.html', {
                 'form': form,
                 'titulo': 'Adicionar Novo Agente'
@@ -198,7 +200,6 @@ def adicionar_agente_view(request):
     else:
         form = AdminAgenteCreationForm()
     
-    # AQUI JÁ NÃO PRECISA ORDENAR NOVAMENTE, O FORM ADMINAGENTE_CREATION FORM JÁ FAZ ISSO NO __init__
     return render(request, 'core/admin_form_agente.html', {
         'form': form,
         'titulo': 'Adicionar Novo Agente'
@@ -210,43 +211,36 @@ def editar_agente_view(request, agente_id):
     if request.method == 'POST':
         form = AdminAgenteChangeForm(request.POST, instance=agente)
         if form.is_valid():
-            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))} # Convertendo para string para log (M2M precisa de tratamento especial)
+            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))} 
                         for k, v in form.cleaned_data.items() if form.cleaned_data.get(k) != form.initial.get(k)}
             
             form.save()
-            # TRATAMENTO ESPECIAL PARA UNIDADES GERENCIADAS, QUE SÃO M2M
-            # Para comparar e logar M2M, precisamos de uma abordagem diferente,
-            # pois o form.initial para M2M é um QuerySet, e o form.cleaned_data é uma lista.
-            # Vamos gerar o log de mudanças para este campo manualmente após o save_m2m
+            # LOG: EDIÇÃO DE AGENTE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # agente.refresh_from_db() 
+            # unidades_gerenciadas_antigas = set(form.initial.get('unidades_gerenciadas_display', [])) 
+            # unidades_gerenciadas_novas = set([u.nome_unidade for u in agente.unidades_gerenciadas.all()])
             
-            # Recarregar o agente para ter as unidades_gerenciadas atualizadas
-            agente.refresh_from_db() 
-            unidades_gerenciadas_antigas = set(form.initial.get('unidades_gerenciadas_display', [])) # Se o display foi adicionado ao initial
-            unidades_gerenciadas_novas = set([u.nome_unidade for u in agente.unidades_gerenciadas.all()])
-            
-            if unidades_gerenciadas_antigas != unidades_gerenciadas_novas:
-                mudancas_m2m = {
-                    'unidades_gerenciadas_antigas': list(unidades_gerenciadas_antigas),
-                    'unidades_gerenciadas_novas': list(unidades_gerenciadas_novas)
-                }
-                # Adiciona mudanças M2M ao dicionário geral de mudanças
-                if 'unidades_gerenciadas' in mudancas: # Remove a entrada padrão se já existir
-                    del mudancas['unidades_gerenciadas']
-                mudancas['unidades_gerenciadas'] = mudancas_m2m
+            # if unidades_gerenciadas_antigas != unidades_gerenciadas_novas:
+            #     mudancas_m2m = {
+            #         'unidades_gerenciadas_antigas': list(unidades_gerenciadas_antigas),
+            #         'unidades_gerenciadas_novas': list(unidades_gerenciadas_novas)
+            #     }
+            #     if 'unidades_gerenciadas' in mudancas: 
+            #         del mudancas['unidades_gerenciadas']
+            #     mudancas['unidades_gerenciadas'] = mudancas_m2m
 
 
             messages.success(request, 'Agente de Pessoal atualizado com sucesso!')
-            if mudancas: # Registra log apenas se houver mudanças
-                registrar_log(request, 'AGENTE_EDITADO', {
-                    'agente_id': agente.id_funcional,
-                    'agente_nome': agente.nome,
-                    'mudancas': mudancas
-                })
+            # if mudancas: 
+            #     registrar_log(request, 'AGENTE_EDITADO', { 
+            #         'agente_id': agente.id_funcional,
+            #         'agente_nome': agente.nome,
+            #         'mudancas': mudancas
+            #     })
             return redirect('core:listar_agentes')
         else:
             print("Erros do formulário:", form.errors)
             messages.error(request, 'Erro ao atualizar agente. Por favor, corrija os erros no formulário.')
-            # AQUI JÁ NÃO PRECISA ORDENAR NOVAMENTE, O FORM ADMINAGENTE_CHANGE_FORM JÁ FAZ ISSO NO __init__
             return render(request, 'core/admin_form_agente.html', {
                 'form': form,
                 'titulo': f'Editando Agente: {agente.nome}'
@@ -255,9 +249,8 @@ def editar_agente_view(request, agente_id):
         form = AdminAgenteChangeForm(instance=agente)
         # Para log de M2M, inicialize o 'unidades_gerenciadas_display' no initial
         # Isso permite capturar o estado inicial do M2M para comparação
-        form.initial['unidades_gerenciadas_display'] = [u.nome_unidade for u in agente.unidades_gerenciadas.all()]
+        # form.initial['unidades_gerenciadas_display'] = [u.nome_unidade for u in agente.unidades_gerenciadas.all()]
     
-    # AQUI JÁ NÃO PRECISA ORDENAR NOVAMENTE, O FORM ADMINAGENTE_CHANGE_FORM JÁ FAZ ISSO NO __init__
     return render(request, 'core/admin_form_agente.html', {
         'form': form,
         'titulo': f'Editando Agente: {agente.nome}'
@@ -267,15 +260,16 @@ def editar_agente_view(request, agente_id):
 def inativar_agente_view(request, agente_id):
     agente = get_object_or_404(Usuario, id=agente_id, perfil='Agente de Pessoal')
     if request.method == 'POST':
-        acao_log = f'AGENTE_{"ATIVADO" if not agente.ativo else "INATIVADO"}' # Define a ação antes de mudar o status
+        # LOG: ATIVAÇÃO/INATIVAÇÃO DE AGENTE (REMOVIDO PARA POLÍTICA RESTRITIVA)
+        # acao_log = f'AGENTE_{"ATIVADO" if not agente.ativo else "INATIVADO"}' 
         agente.ativo = not agente.ativo
         agente.save()
         messages.success(request, f"Agente '{agente.nome}' foi {'ativado' if agente.ativo else 'inativado'} com sucesso.")
-        registrar_log(request, acao_log, {
-            'agente_nome': agente.nome,
-            'agente_id': agente.id_funcional,
-            'status_novo': agente.ativo
-        })
+        # registrar_log(request, acao_log, {
+        #     'agente_nome': agente.nome,
+        #     'agente_id': agente.id_funcional,
+        #     'status_novo': agente.ativo
+        # })
         return redirect('core:listar_agentes')
     return render(request, 'core/admin_inativar_agente_confirm.html', {'agente': agente})
 
@@ -298,16 +292,16 @@ def adicionar_usuario_admin_view(request):
     if request.method == 'POST':
         form = AdminUsuarioCreationForm(request.POST)
         if form.is_valid():
-            novo_usuario = form.save() # Captura o objeto salvo
+            novo_usuario = form.save() 
             messages.success(request, 'Usuário criado com sucesso!')
-            # REGISTRA LOG PARA CRIAÇÃO DE USUÁRIO POR ADMIN
-            registrar_log(request, 'USER_CREATE_BY_ADMIN', {
-                'novo_usuario_id': novo_usuario.id,
-                'novo_usuario_nome': novo_usuario.nome,
-                'novo_usuario_id_funcional': novo_usuario.id_funcional,
-                'perfil': novo_usuario.perfil,
-                'lotacao': novo_usuario.lotacao.nome_unidade if novo_usuario.lotacao else 'N/A'
-            })
+            # LOG: CRIAÇÃO DE USUÁRIO POR ADMIN (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # registrar_log(request, 'USER_CREATE_BY_ADMIN', {
+            #     'novo_usuario_id': novo_usuario.id,
+            #     'novo_usuario_nome': novo_usuario.nome,
+            #     'novo_usuario_id_funcional': novo_usuario.id_funcional,
+            #     'perfil': novo_usuario.perfil,
+            #     'lotacao': novo_usuario.lotacao.nome_unidade if novo_usuario.lotacao else 'N/A'
+            # })
             return redirect('core:listar_usuarios')
         else:
             print("Erros do formulário:", form.errors)
@@ -328,12 +322,13 @@ def editar_usuario_admin_view(request, usuario_id):
             
             form.save()
             messages.success(request, 'Usuário atualizado com sucesso!')
-            if mudancas: # Registra log apenas se houver mudanças
-                registrar_log(request, 'USER_EDIT_BY_ADMIN', { # REGISTRA LOG PARA EDIÇÃO DE USUÁRIO POR ADMIN
-                    'usuario_id': usuario.id_funcional,
-                    'usuario_nome': usuario.nome,
-                    'mudancas': mudancas
-                })
+            # LOG: EDIÇÃO DE USUÁRIO POR ADMIN (REMOVIDO PARA POLÍTICA RESTRITIVA)
+            # if mudancas: 
+            #     registrar_log(request, 'USER_EDIT_BY_ADMIN', { 
+            #         'usuario_id': usuario.id_funcional,
+            #         'usuario_nome': usuario.nome,
+            #         'mudancas': mudancas
+            #     })
             return redirect('core:listar_usuarios')
         else:
             messages.error(request, 'Erro ao atualizar usuário. Por favor, corrija os erros no formulário.')
@@ -346,15 +341,16 @@ def editar_usuario_admin_view(request, usuario_id):
 def inativar_usuario_admin_view(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     if request.method == 'POST':
-        acao_log = f'USUARIO_{"ATIVADO" if not usuario.ativo else "INATIVADO"}' # Define a ação antes de mudar o status
+        # LOG: ATIVAÇÃO/INATIVAÇÃO DE USUÁRIO (REMOVIDO PARA POLÍTICA RESTRITIVA)
+        # acao_log = f'USUARIO_{"ATIVADO" if not usuario.ativo else "INATIVADO"}' 
         usuario.ativo = not usuario.ativo
         usuario.save()
         messages.success(request, f"Usuário '{usuario.nome}' foi {'ativado' if usuario.ativo else 'inativado'} com sucesso.")
-        registrar_log(request, acao_log, {
-            'usuario_nome': usuario.nome,
-            'usuario_id': usuario.id_funcional,
-            'status_novo': usuario.ativo
-        })
+        # registrar_log(request, acao_log, {
+        #     'usuario_nome': usuario.nome,
+        #     'usuario_id': usuario.id_funcional,
+        #     'status_novo': usuario.ativo
+        # })
         return redirect('core:listar_usuarios')
     return render(request, 'core/admin_inativar_usuario_confirm.html', {'usuario': usuario})
 
@@ -429,14 +425,17 @@ def admin_auditoria_view(request):
     try:
         logs_page_obj = paginator.page(page)
         # Filtra os logs serializados para obter apenas os que estão na página atual
+        # logs_serializados não existe mais, usar logs_para_template
         logs_page_obj.object_list = [l for l in logs_para_template if l.pk in [obj.pk for obj in logs_page_obj.object_list]]
         logs = logs_page_obj
-    except PageNotAnInteger: # Correção: o nome da exceção é PageNotAnInteger
+    except PageNotAnInteger: 
         logs = paginator.page(1)
-        logs.object_list = [l for l in logs_serializados if l.pk in [obj.pk for obj in logs.object_list]]
+        # logs_serializados não existe mais, usar logs_para_template
+        logs.object_list = [l for l in logs_para_template if l.pk in [obj.pk for obj in logs.object_list]]
     except EmptyPage:
         logs = paginator.page(paginator.num_pages)
-        logs.object_list = [l for l in logs_serializados if l.pk in [obj.pk for obj in logs.object_list]]
+        # logs_serializados não existe mais, usar logs_para_template
+        logs.object_list = [l for l in logs_para_template if l.pk in [obj.pk for obj in logs.object_list]]
     
     # Dados para os filtros do template
     usuarios_para_filtro = Usuario.objects.all().order_by('nome')

@@ -61,7 +61,6 @@ def preparar_dados_para_pdf(folha):
 
 def popular_dias_folha(folha_ponto_instance):
     try:
-        
         cod_livre = CodigoOcorrencia.objects.get(codigo__iexact='Livre')
         cod_sabado = CodigoOcorrencia.objects.get(codigo__iexact='SÁBADO')
         cod_domingo = CodigoOcorrencia.objects.get(codigo__iexact='DOMINGO')
@@ -90,34 +89,43 @@ def popular_dias_folha(folha_ponto_instance):
         DiaPonto.objects.bulk_create(dias_a_criar)
     return dias_a_criar
 
+# LISTA RESTRITIVA DE AÇÕES DE AUDITORIA ESSENCIAIS (FOCO EM IRREVERSÍVEL)
 ACOES_DE_AUDITORIA_ESSENCIAIS = [
-    'LOGIN_FAILURE',                  # Tentativas falhas de login
-    'PASSWORD_CHANGE_SUCCESS',        # Troca de senha
-    'FIRST_LOGIN_REDIRECT',           # Primeiro login forçando troca de senha (indica reset)
-    'USER_CREATE_BY_AGENTE',          # Criação de usuário por Agente
-    'USER_CREATE_BY_ADMIN',           # NOVO: Criação de usuário por Administrador Geral
-    'USER_EDIT_BY_AGENTE',            # Edição de usuário por Agente
-    'USER_INACTIVATE_BY_AGENTE',      # Inativação de usuário por Agente
-    'USER_REACTIVATE_BY_AGENTE',      # Reativação de usuário por Agente
-    'USER_TRANSFER',                  # Transferência de usuário
     'DELETE_USUARIO_PERMANENTE',      # Exclusão PERMANENTE de usuário
     'DELETE_FOLHA_PERMANENTE',        # Exclusão PERMANENTE de folha
     'DELETE_UNIDADE_PERMANENTE',      # Exclusão PERMANENTE de unidade
-    'BLOQUEIO_DIA',                   # Bloqueio de um dia de ponto
-    'BLOQUEIO_LOTE',                  # Bloqueio de dias em lote
-    'CRIAR_FOLHA_MANUAL',             # Criação manual de folha por agente
+    'USER_TRANSFER',                  # Transferência de usuário
     'DELETAR_FOLHA',                  # Exclusão (não permanente) de folha por agente
-    'ARQUIVAR_FOLHA',                 # Arquivamento de folha
-    'DESARQUIVAR_FOLHA',              # Desarquivamento de folha
-    'ARQUIVAR_FOLHA_LOTE',            # Arquivamento de folhas em lote
-    'LOGOUT',                         # Saída do sistema
-    'LOGIN_SUCCESS',                  # Login bem-sucedido
-    'UNIDADE_ATIVADA',                # Ativação de unidade
-    'UNIDADE_INATIVADA',              # Inativação de unidade
-    'AGENTE_ATIVADO',                 # Ativação de agente
-    'AGENTE_INATIVADO',               # Inativação de agente
-    'USUARIO_ATIVADO',                # Ativação de usuário
-    'USUARIO_INATIVADO',              # Inativação de usuário
+    'PASSWORD_CHANGE_SUCCESS',        # Troca de senha
+    'CRIAR_FOLHA_MANUAL',             # Criação manual de folha por agente
+    # As ações abaixo foram removidas para tornar o log mais restritivo
+    # 'LOGIN_FAILURE',
+    # 'FIRST_LOGIN_REDIRECT',
+    # 'USER_CREATE_BY_AGENTE',
+    # 'USER_CREATE_BY_ADMIN',
+    # 'USER_EDIT_BY_AGENTE',
+    # 'USER_EDIT_BY_ADMIN',
+    # 'USER_INACTIVATE_BY_AGENTE',
+    # 'USER_REACTIVATE_BY_AGENTE',
+    # 'BLOQUEIO_DIA',
+    # 'BLOQUEIO_LOTE',
+    # 'ARQUIVAR_FOLHA',
+    # 'DESARQUIVAR_FOLHA',
+    # 'ARQUIVAR_FOLHA_LOTE',
+    # 'LOGOUT',
+    # 'LOGIN_SUCCESS',
+    # 'UNIDADE_ATIVADA',
+    # 'UNIDADE_INATIVADA',
+    # 'AGENTE_ATIVADO',
+    # 'AGENTE_INATIVADO',
+    # 'USUARIO_ATIVADO',
+    # 'USUARIO_INATIVADO',
+    # 'UNIDADE_CRIADA', # Nova adição para registro de criação de unidade
+    # 'UNIDADE_EDITADA', # Nova adição para registro de edição de unidade
+    # 'AGENTE_CRIADO', # Nova adição para registro de criação de agente
+    # 'AGENTE_EDITADO', # Nova adição para registro de edição de agente
+    # 'USER_EDIT_BY_ADMIN', # Nova adição para registro de edição de usuario por admin
+    # 'USER_CREATE_BY_ADMIN', # Nova adição para registro de criação de usuario por admin
 ]
 
 def registrar_log(request, acao, detalhes=None, ip_address=None):
