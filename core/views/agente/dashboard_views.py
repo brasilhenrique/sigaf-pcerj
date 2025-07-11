@@ -1,4 +1,5 @@
 # ARQUIVO: core/views/agente/dashboard_views.py
+# SIGAF Detection
 
 from django.shortcuts import render, redirect
 from django.contrib import messages

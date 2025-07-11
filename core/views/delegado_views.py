@@ -1,4 +1,5 @@
 # F:\dev\sigaf-novo\core\views\delegado_views.py (CORRIGIDO)
+# SIGAF Detection
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
