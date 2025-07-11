@@ -63,18 +63,18 @@
                                         {% else %}
                                             {{ dia.codigo.denominacao }}
                                         {% endif %}
-                                        
+                                       
                                         {% if dia.delegado_conferiu %}
-                                            <br><small class="text-info">Conferido por {{ dia.delegado.get_short_name }} (ID: {{ dia.delegado.id_funcional }})</small>
+                                            <br><small class="text-info">Conferido por {{ dia.delegado.get_full_name }} (ID: {{ dia.delegado.id_funcional }})</small> {# ALTERADO: get_short_name para get_full_name #}
                                         {% endif %}
                                     </td>
                                     <td class="text-right" style="width: 140px;">
                                         {% if folha.status != 'Arquivada' %}
                                             {% if dia.servidor_assinou and not dia.delegado_conferiu %}
-                                            <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-info">Conferir</button>
-                                            </form>
+                                                <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-info">Conferir</button>
+                                                </form>
                                             {% elif dia.delegado_conferiu and dia.delegado == request.user %}
                                             <form action="{% url 'core:delegado_desfazer_conferencia' dia.id %}" method="post">
                                                 {% csrf_token %}

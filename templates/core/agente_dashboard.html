@@ -94,7 +94,7 @@
             </div>
             
             <div class="col-lg-2">
-                 <div class="card card-secondary card-outline" style="height: calc(100% - 1rem);">
+                <div class="card card-secondary card-outline" style="height: calc(100% - 1rem);">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-chart-pie mr-2"></i>Status</h3>
                     </div>
@@ -119,7 +119,9 @@
                                 <tr>
                                     <th>Nome</th>
                                     <th>ID Funcional</th>
-                                    <th>Lotação</th> <th style="width: 200px">Ações</th>
+                                    <th>Perfil</th> {# NOVO: Coluna Perfil #}
+                                    <th>Lotação</th>
+                                    <th style="width: 200px">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -127,6 +129,7 @@
                                 <tr>
                                     <td>{{ servidor.nome }}</td>
                                     <td>{{ servidor.id_funcional }}</td>
+                                    <td>{{ servidor.perfil }}</td> {# NOVO: Exibição do Perfil #}
                                     <td>{{ servidor.lotacao.nome_unidade }}</td>
                                     <td class="text-center">
                                         <a href="{% url 'core:agente_criar_folha' %}?usuario_id={{ servidor.id }}" class="btn btn-sm btn-success" title="Criar Folha Manual"><i class="fas fa-file-alt"></i></a>
@@ -171,11 +174,11 @@ $(function () {
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
         "rowGroup": {
-            dataSrc: 2 // Agrupa pela coluna de índice 2 (Lotação)
+            dataSrc: 3 // ORDENAÇÃO: Alterado de 2 para 3 para agrupar pela nova coluna de Lotação (agora índice 3)
         },
         "columnDefs": [
-            { "targets": [2], "visible": false }, // Oculta a coluna de Lotação original
-            { "orderable": false, "targets": [0, 1, 3] }
+            { "targets": [3], "visible": false }, // ORDENAÇÃO: Alterado de 2 para 3 para ocultar a nova coluna de Lotação (agora índice 3)
+            { "orderable": false, "targets": [0, 1, 2, 4] } // ORDENAÇÃO: Atualizado os índices para 'Ações' (agora 4) e adicionado 2 (Perfil)
         ]
     });
 
