@@ -21,8 +21,9 @@ def dashboard_view(request):
     if request.user.perfil == 'Administrador Geral':
         return redirect('core:admin_geral_dashboard')
     
-    # Redireciona Agente de Pessoal para seu dashboard
-    if request.user.perfil == 'Agente de Pessoal':
+    # Se o usuário é Agente de Pessoal e NÃO está acessando a URL de 'Minha Folha de Ponto' explicitamente,
+    # redireciona para o dashboard do agente. Caso contrário, ele prossegue para ver sua folha.
+    if request.user.perfil == 'Agente de Pessoal' and request.resolver_match.url_name != 'agente_minha_folha':
         return redirect('core:agente_dashboard')
 
     # Redireciona Delegados e Servidores-Conferentes para o dashboard de conferência,
