@@ -36,7 +36,7 @@ def gerar_pdf_unidade_view(request):
             folhas = FolhaPonto.objects.filter(
                 servidor__lotacao=unidade, 
                 servidor__ativo=True,
-                servidor__lotacao__in=request.user.unidades_gerenciadas.all(),
+                servidor__lotacao__in=request.user.unidades_atuacao.all(), # CORRIGIDO AQUI: unidades_gerenciadas -> unidades_atuacao [cite: 1510]
                 ano=ano, 
                 trimestre=trimestre
             ).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome')
@@ -73,7 +73,7 @@ def gerar_pdf_unidade_view(request):
             
             html_string = render_to_string('core/impressao_ponto_unidade.html', context)
             pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
-            
+           
             response = HttpResponse(pdf_file, content_type='application/pdf')
             filename = f"folhas_{unidade.nome_unidade}_{ano}_{trimestre}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -86,8 +86,9 @@ def gerar_pdf_unidade_view(request):
 def gerar_pdf_individual_view(request, folha_id):
     folha = get_object_or_404(FolhaPonto, id=folha_id)
     
+    # CORRIGIDO AQUI: unidades_gerenciadas -> unidades_atuacao 
     if request.user != folha.servidor and \
-       not (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_gerenciadas.all()):
+       not (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all()):
         messages.error(request, "Você não tem permissão para gerar este PDF.")
         return redirect('core:dashboard')
     

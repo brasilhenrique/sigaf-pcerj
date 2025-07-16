@@ -4,82 +4,103 @@
     <meta charset="UTF-8">
     <title>Folha de Ponto - {{ folha.servidor.nome }}</title>
     <style>
-        @page { size: A4 landscape; margin: 1cm; }
+        /* Margens e orientação da página */
+        @page { size: A4 landscape; margin: 0.7cm 1cm; } /* Margens superior/inferior 0.7cm, laterais 1cm */
         @media print { .folha-ponto { page-break-after: always; } }
         body { font-family: 'Helvetica', Arial, sans-serif; font-size: 8pt; color: #000; }
         .folha-ponto { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .master-table { width: 100%; border-collapse: collapse; }
-        .master-table td, .master-table th { border: 1px solid black; padding: 4px; vertical-align: top; }
-        .brasao-container { text-align: center; padding: 5px 0; } /* Ajustado padding */
-        .brasao-container img { width: 55px; height: auto; } /* Diminuído o tamanho do brasão */
-
-        /* Estilos para o novo cabeçalho */
-        .header-section { text-align: center; font-weight: bold; margin-bottom: 5px; }
-        .header-section.gov { font-size: 9pt; } /* Um pouco maior */
-        .header-section.cartao { font-size: 10pt; margin-top: 10px; } /* Destaque para o título do cartão */
-        .header-section.policia-civil { font-size: 9pt; margin-top: 10px; } /* Informações da PCERJ */
-        .header-section.policia-civil span { font-weight: normal; } /* Nome da UA em normal */
-        .header-section.servidor-info { font-size: 9pt; margin-top: 10px; } /* Informações do servidor */
-        .header-section.servidor-info span { font-weight: normal; } /* Nomes e cargos em normal */
+        .master-table td, .master-table th { border: 1px solid black; padding: 2px 4px; vertical-align: top; } /* Diminuído o padding das células da tabela principal */
         
-        .no-border { border: none !important; }
+        /* Estilos do cabeçalho */
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { border: none; padding: 1px 0; font-size: 7.5pt; line-height: 1.1; } /* Fonte um pouco menor e line-height ajustado */
+        .header-table .brasao-cell { width: 60px; text-align: center; vertical-align: middle; padding-right: 5px; }
+        .header-table .brasao-cell img { width: 45px; height: auto; } /* Diminuído o tamanho do brasão */
+        .header-table .gov-info { text-align: left; font-weight: bold; }
+        .header-table .gov-info span { font-weight: normal; }
+        .header-table .title-center { 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 8.5pt; 
+            padding-top: 4px; /* Aumentado o padding superior */
+            padding-bottom: 4px; /* Aumentado o padding inferior */
+        }
+        .header-table .right-info { text-align: right; font-weight: bold; }
+        .header-table .right-info span { font-weight: normal; }
+        .header-table .border-bottom-dotted { border-bottom: 1px dotted black; }
+        
+        /* Estilos específicos das células de dias e assinaturas */
         .month-header { background-color: #E0E0E0; font-weight: bold; text-align: center; }
-        .day-header { background-color: #E0E0E0; font-weight: bold; text-align: center; font-size: 7.5pt; }
-        .day-cell { text-align: center; font-size: 8pt; vertical-align: middle; font-weight: bold; }
+        .day-header { background-color: #E0E0E0; font-weight: bold; text-align: center; font-size: 7pt; }
+        .day-cell { text-align: center; font-size: 7.5pt; vertical-align: middle; font-weight: bold; }
         .separator-col { border-right: 1px solid black !important; width: 1%; background-color: #f0f0f0; }
-        .signature-cell { text-align: center; font-size: 6.5pt; line-height: 1.2; word-break: break-word; vertical-align: middle;}
+        .signature-cell { text-align: center; font-size: 6pt; line-height: 1.1; word-break: break-word; vertical-align: middle; padding: 1px 2px; }
         .ocorrencia-cell {
             text-align: center;
             font-weight: bold;
-            font-size: 8pt;
+            font-size: 7pt;
             background-color: #f8f9fa;
             vertical-align: middle;
+            padding: 1px 2px;
         }
         .pendente-assinatura {
             color: #888;
             font-style: italic;
-            font-size: 7pt;
+            font-size: 6pt;
         }
+
+        /* Estilo para a seção de Observações */
+        .observacoes-box { margin-top: 15px; padding: 8px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .observacoes-box p { margin-bottom: 3px; }
+        .observacoes-box p:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
     <div class="folha-ponto">
+        <table class="header-table">
+            <tr>
+                <td rowspan="4" class="brasao-cell">
+                    <img src="{{ imagem_path }}" alt="Brasão da PCERJ">
+                </td>
+                <td colspan="2" class="gov-info">GOVERNO DO ESTADO DO RIO DE JANEIRO</td>
+                <td class="right-info border-bottom-dotted">ID FUNCIONAL: <span>{{ folha.servidor.id_funcional }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2" class="gov-info border-bottom-dotted">Secretaria de Estado da Casa Civil</td>
+                <td class="right-info border-bottom-dotted"><span>{{ folha.servidor.nome }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2" class="title-center border-bottom-dotted">CARTÃO DE FREQUÊNCIA TRIMESTRAL - {{ folha.get_trimestre_display|upper }} / {{ folha.ano }}</td>
+                <td class="right-info border-bottom-dotted"><span>{{ folha.servidor.perfil|upper }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2" class="gov-info">SECRETARIA DE ESTADO DE POLÍCIA CIVIL<br>
+                    UA: <span>{{ folha.servidor.lotacao.nome_unidade|upper|default:"NÃO INFORMADA" }}</span><br>
+                    Código UA: <span>{{ folha.servidor.lotacao.codigo_ua|default:"NÃO INFORMADO" }}</span>
+                </td>
+                <td class="right-info"></td> {# Célula vazia para alinhamento #}
+            </tr>
+        </table>
+
         <table class="master-table">
             <thead>
                 <tr>
-                    <td colspan="10" class="no-border">
-                        <div class="brasao-container">
-                             <img src="{{ imagem_path }}" alt="Brasão da PCERJ">
-                        </div>
-                        <div class="header-section gov">
-                            GOVERNO DO ESTADO DO RIO DE JANEIRO<br>
-                            Secretaria de Estado da Casa Civil
-                        </div>
-                        <div class="header-section cartao">
-                            CARTÃO DE FREQUÊNCIA TRIMESTRAL - {{ folha.get_trimestre_display|upper }} / {{ folha.ano }}
-                        </div>
-                        <div class="header-section policia-civil">
-                            SECRETARIA DE ESTADO DE POLÍCIA CIVIL<br>
-                            UA: <span>{{ folha.servidor.lotacao.nome_unidade|upper|default:"NÃO INFORMADA" }}</span><br>
-                            Código: <span>{{ folha.servidor.lotacao.codigo_ua|default:"NÃO INFORMADO" }}</span>
-                        </div>
-                        <div class="header-section servidor-info">
-                            ID FUNCIONAL: <span>{{ folha.servidor.id_funcional }}</span><br>
-                            <span>{{ folha.servidor.nome }}</span><br>
-                            <span>{{ folha.servidor.perfil|upper }}</span>
-                        </div>
-                    </td>
+                    <th rowspan="2" class="day-header" style="vertical-align: middle; width: 3%;">DIA</th>
+                    <th colspan="3" class="month-header" style="width: 32%;">{{ meses.0|upper }}</th>
+                    <th colspan="3" class="month-header" style="width: 32%;">{{ meses.1|upper }}</th>
+                    <th colspan="3" class="month-header" style="width: 32%;">{{ meses.2|upper }}</th>
                 </tr>
                 <tr>
-                    <th rowspan="2" class="day-header" style="vertical-align: middle;">DIA</th>
-                    <th colspan="3" class="month-header">{{ meses.0|upper }}</th>
-                    <th colspan="3" class="month-header">{{ meses.1|upper }}</th>
-                    <th colspan="3" class="month-header">{{ meses.2|upper }}</th>
-                </tr>
-                <tr>
-                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="separator-col day-header"></th>
-                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="separator-col day-header"></th>
-                    <th class="day-header">ASSINATURA</th> <th class="day-header">CONFERÊNCIA</th> <th class="day-header" style="width:1%;"></th>
+                    <th class="day-header" style="width: 10%;">ASSINATURA</th> 
+                    <th class="day-header" style="width: 10%;">CONFERÊNCIA</th> 
+                    <th class="separator-col day-header" style="width: 2%;"></th>
+                    <th class="day-header" style="width: 10%;">ASSINATURA</th> 
+                    <th class="day-header" style="width: 10%;">CONFERÊNCIA</th> 
+                    <th class="separator-col day-header" style="width: 2%;"></th>
+                    <th class="day-header" style="width: 10%;">ASSINATURA</th> 
+                    <th class="day-header" style="width: 10%;">CONFERÊNCIA</th> 
+                    <th class="day-header" style="width: 2%;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -106,13 +127,13 @@
                                     {% endif %}
                                 </td>
                             {% else %}
-                            <td colspan="2" class="ocorrencia-cell">
-                                {% if dia_obj.codigo.codigo %}
-                                    {{ dia_obj.codigo.denominacao }} - CÓDIGO {{ dia_obj.codigo.codigo }}
-                                {% else %}
-                                    {{ dia_obj.codigo.denominacao }} - CÓDIGO N/A
-                                {% endif %}
-                            </td>
+                                <td colspan="2" class="ocorrencia-cell">
+                                    {% if dia_obj.codigo.codigo %}
+                                        {{ dia_obj.codigo.denominacao }} - CÓDIGO {{ dia_obj.codigo.codigo }}
+                                    {% else %}
+                                        {{ dia_obj.codigo.denominacao }} - CÓDIGO N/A
+                                    {% endif %}
+                                </td>
                             {% endif %}
                             <td class="separator-col"></td>
                         {% else %}
@@ -126,7 +147,7 @@
 
         {# Seção de Observações #}
         {% if folha.observacoes %}
-        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9;">
+        <div class="observacoes-box">
             <p style="font-weight: bold; margin-bottom: 5px;">Observações:</p>
             <p style="white-space: pre-wrap; margin-bottom: 0;">{{ folha.observacoes }}</p>
         </div>
