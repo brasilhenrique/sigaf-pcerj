@@ -1,4 +1,5 @@
 {% extends 'base_adminlte.html' %}
+{% load static %}
 
 {% block title %}Dashboard do Delegado{% endblock %}
 
@@ -12,12 +13,13 @@
     </div>
     <div class="card-body p-0">
         {% if folhas_pendentes %} {# Alterado para usar folhas_pendentes diretamente #}
-            <table class="table table-hover mb-0"> {# Adicionado mb-0 #}
+            <table class="table table-hover mb-0" id="tabela-pendencias"> {# Adicionado ID para DataTables #}
                 <thead>
                     <tr>
-                        <th style="width: 40%;">Servidor</th>
-                        <th style="width: 40%;">Período da Folha</th>
-                        <th style="width: 20%;" class="text-center">Ação</th>
+                        <th style="width: 30%;">Servidor</th> {# Ajustado largura #}
+                        <th style="width: 25%;">Perfil</th> {# NOVA COLUNA AQUI #}
+                        <th style="width: 30%;">Período da Folha</th> {# Ajustado largura #}
+                        <th style="width: 15%;" class="text-center">Ação</th> {# Ajustado largura #}
                     </tr>
                 </thead>
                 <tbody>
@@ -27,13 +29,24 @@
                                 <strong>{{ folha.servidor.nome }}</strong><br>
                                 <small class="text-muted">ID nº {{ folha.servidor.id_funcional }}</small>
                             </td>
+                            <td>
+                                <span class="badge 
+                                    {% if folha.servidor.is_administrador_geral %}badge-dark
+                                    {% elif folha.servidor.is_agente_pessoal %}badge-info
+                                    {% elif folha.servidor.is_delegado %}badge-warning
+                                    {% elif folha.servidor.is_conferente %}badge-primary 
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ folha.servidor.perfil }}
+                                    {% if folha.servidor.is_conferente %}{% if not folha.servidor.is_delegado %} (Conf.){% endif %}{% endif %} 
+                                </span>
+                            </td> {# NOVA COLUNA AQUI #}
                             <td>{{ folha.get_trimestre_display }} de {{ folha.ano }}</td>
                             <td class="text-center align-middle">
                                 {% if folha.servidor == request.user %}
-                                    {# Delegado acessando sua própria folha com pendências #}
+                                    {# Delegado/Conferente acessando sua própria folha com pendências #}
                                     <a href="{% url 'core:delegado_minha_folha' %}" class="btn btn-sm btn-warning" title="Conferir Minha Folha">Conferir Minha Folha</a> {# Ajustado para usar namespace #}
                                 {% else %}
-                                    {# Delegado acessando folha de outro servidor #}
+                                    {# Delegado/Conferente acessando folha de outro servidor #}
                                     <a href="{% url 'core:delegado_ver_folha' folha.id %}" class="btn btn-sm btn-danger" title="Conferir Folha">Conferir Folha</a> {# Ajustado para usar namespace #}
                                 {% endif %}
                             </td>
@@ -49,4 +62,30 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+    <script>
+        $(function () {
+            $('#tabela-pendencias').DataTable({
+                "paging": true,
+                "lengthChange": false,
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
+                "language": {
+                    "url": "{% static 'plugins/datatables/Portuguese-Brasil.json' %}"
+                },
+                "columnDefs": [
+                    { "orderable": false, "targets": [3] } // Desabilita ordenação para a coluna de Ação
+                ]
+            });
+        });
+    </script>
 {% endblock %}

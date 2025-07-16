@@ -1,8 +1,9 @@
+{# ARQUIVO: templates/core/gerenciar_ponto.html #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
 {% block page_title %}Gerenciar Ponto: {{ servidor.nome }}{% endblock %}
-{% block page_title_header %}Gerenciar Ponto: {{ servidor.nome }}{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Gerenciar Ponto: {{ servidor.nome }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -55,19 +56,42 @@
         </div>
         {% endif %}
 
+        {# MENSAGEM DE DEPURACAO: VERIFICA SE MESES ESTÁ VAZIO #}
+        {% if not meses %}
+        <div class="alert alert-danger text-center">
+            <h4><i class="icon fas fa-exclamation-triangle"></i> Erro: Dias da Folha Não Encontrados!</h4>
+            <p>Não foi possível carregar os dias para esta folha de ponto (ID: {{ folha_ponto.id }}). Por favor, verifique se as ocorrências padrão (Livre, SÁBADO, DOMINGO) estão cadastradas corretamente ou se a folha foi populada.</p>
+        </div>
+        {% endif %}
+
         <div class="row">
-            {% for mes_data in meses %} {# Renomeado para mes_data para evitar conflito #}
+            {% for mes_data in meses %}
             <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="card-title">{{ mes_data.nome_mes }}</h4>
+                        <div class="btn-group">
+                            {# LÓGICA PARA EXIBIR BOTÕES DE CONFERIR/DESFAZER MÊS INTEIRO #}
+                            {% if mes_data.pode_conferir_mes %}
+                                <form action="{% url 'core:delegado_conferir_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-info">Conferir Mês</button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if mes_data.pode_desfazer_conferencia_mes %}
+                                <form action="{% url 'core:desfazer_conferencia_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Desfazer Mês</button>
+                                </form>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-sm table-bordered">
                             <tbody>
                                 {% for dia in mes_data.dias %}
                                 <tr>
-                                    {# COLUNA 1: DIA E ÍCONES DE STATUS #}
                                     <td class="text-center align-middle" style="width: 60px;">
                                         <strong>{{ dia.data_dia|date:"d" }}</strong>
                                         <div class="mt-1">
@@ -79,10 +103,8 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    
                                     {# COLUNA 2: FORMULÁRIO COM DROPDOWN E BOTÃO SALVAR #}
                                     <td class="py-1 align-middle">
-                                        {# O formulário só aparece se a folha puder ser editada #}
                                         {% if pode_editar %}
                                         <form action="{% url 'core:bloquear_dia' %}" method="post" class="d-flex">
                                             {% csrf_token %}
@@ -91,7 +113,11 @@
                                             <select name="codigo" class="form-control form-control-sm flex-grow-1">
                                                 {% for codigo in codigos_ocorrencia %}
                                                     <option value="{{ codigo.id }}" {% if codigo.id == dia.codigo.id %}selected{% endif %}>
-                                                        {{ codigo.denominacao }}
+                                                        {% if codigo.codigo == 'LIVRE' or codigo.codigo == 'SÁBADO' or codigo.codigo == 'DOMINGO' %}
+                                                            {{ codigo.denominacao }}
+                                                        {% else %}
+                                                            CÓDIGO {{ codigo.codigo }} - {{ codigo.denominacao }}
+                                                        {% endif %}
                                                     </option>
                                                 {% endfor %}
                                             </select>
@@ -112,6 +138,30 @@
             </div>
             {% endfor %}
         </div>
+
+        {# Novo campo de Observações #}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card card-outline card-secondary">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-comment-dots mr-1"></i> Observações da Folha</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'core:salvar_observacoes_folha' folha_ponto.id %}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="id_observacoes">Adicione anotações importantes sobre esta folha:</label>
+                                <textarea name="observacoes" id="id_observacoes" class="form-control" rows="3" {% if not pode_editar %}disabled{% endif %}>{{ folha_ponto.observacoes|default_if_none:"" }}</textarea>
+                            </div>
+                            {% if pode_editar %}
+                            <button type="submit" class="btn btn-primary float-right"><i class="fas fa-save mr-1"></i> Salvar Observações</button>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -125,7 +175,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form action="{% url 'core:bloquear_dias_em_lote' folha_ponto.id %}" method="post"> {# Ajustado para usar namespace #}
+            <form action="{% url 'core:bloquear_dias_em_lote' folha_ponto.id %}" method="post">
                 {% csrf_token %}
                 <div class="modal-body">
                     <p>Selecione a ocorrência e o período para aplicar a todos os dias do servidor <strong>{{ servidor.nome }}</strong>.</p>
@@ -135,8 +185,8 @@
                         <select name="codigo_lote" id="codigo_lote" class="form-control" required>
                             <option value="" selected disabled>--- Selecione uma ocorrência ---</option>
                             {% for codigo in codigos_ocorrencia %}
-                                {% if codigo.codigo.lower not in "livre,sábado,domingo" %} {# Exclui de forma case-insensitive #}
-                                <option value="{{ codigo.id }}">{{ codigo.codigo }} - {{ codigo.denominacao }}</option>
+                                {% if codigo.codigo.lower not in "livre,sábado,domingo" %}
+                                <option value="{{ codigo.id }}">{{ codigo.denominacao }} - CÓDIGO {{ codigo.codigo }}</option>
                                 {% endif %}
                             {% endfor %}
                         </select>

@@ -26,6 +26,17 @@
                             <div class="text-danger small mt-1">{{ form.nome_unidade.errors|first }}</div>
                         {% endif %}
                     </div>
+                    {# NOVO CAMPO: CODIGO UA #}
+                    <div class="form-group">
+                        <label for="{{ form.codigo_ua.id_for_label }}">{{ form.codigo_ua.label }}</label>
+                        {{ form.codigo_ua }}
+                        {% if form.codigo_ua.help_text %}
+                            <small class="form-text text-muted">{{ form.codigo_ua.help_text }}</small>
+                        {% endif %}
+                         {% if form.codigo_ua.errors %}
+                            <div class="text-danger small mt-1">{{ form.codigo_ua.errors|first }}</div>
+                        {% endif %}
+                    </div>
                     <div class="form-check">
                         {{ form.ativo }}
                         <label class="form-check-label" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>

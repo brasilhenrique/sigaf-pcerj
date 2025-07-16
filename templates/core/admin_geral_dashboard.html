@@ -1,26 +1,67 @@
+{# ARQUIVO: templates/core/admin_geral_dashboard.html #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
 {% block title %}Dashboard do Administrador{% endblock %}
 {% block page_title %}Dashboard do Administrador Geral{% endblock %}
-{% block page_title_header %}Dashboard do Administrador Geral{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Dashboard do Administrador Geral{% endblock %}
 
 
 {% block content %}
-<div class="row">
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box"><span class="info-box-icon bg-info elevation-1"><i class="fas fa-users"></i></span><div class="info-box-content"><span class="info-box-text">Total de Servidores Ativos</span><span class="info-box-number">{{ total_usuarios }}</span></div></div>
+{# Ajuste para a linha dos info-boxes: usar 'justify-content-between' e classes de coluna maiores #}
+<div class="row justify-content-between align-items-center mb-4">
+    {# Aumentado a largura das colunas para 'col-md-auto' ou 'col-md-2' para dar mais espaço, e ajustando 'col-sm' #}
+    {# Se 'col-md-auto' não for suficiente, poderíamos voltar para 'col-md-3' e aceitar duas linhas em telas médias #}
+    <div class="col-12 col-sm-6 col-md-auto"> {# Ajustado para 'col-md-auto' para se ajustar ao conteúdo #}
+        <div class="info-box bg-white shadow-none">
+            {# Ajustado 'mr-1' para 'mr-2' para espaçamento padrão ou remover 'mr-' se o ícone ficar muito colado #}
+            <span class="info-box-icon text-info mr-2"><i class="fas fa-users"></i></span> 
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">Total de Servidores Ativos</span> 
+                <span class="info-box-number text-info">{{ total_usuarios }}</span>
+            </div>
+        </div>
     </div>
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3"><span class="info-box-icon bg-danger elevation-1"><i class="fas fa-user-shield"></i></span><div class="info-box-content"><span class="info-box-text">Agentes de Pessoal Ativos</span><span class="info-box-number">{{ total_agentes }}</span></div></div>
+    <div class="col-12 col-sm-6 col-md-auto">
+        <div class="info-box bg-white shadow-none">
+            <span class="info-box-icon text-danger mr-2"><i class="fas fa-user-shield"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">Agentes de Pessoal Ativos</span> 
+                <span class="info-box-number text-danger">{{ total_agentes }}</span>
+            </div>
+        </div>
     </div>
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3"><span class="info-box-icon bg-warning elevation-1"><i class="fas fa-building"></i></span><div class="info-box-content"><span class="info-box-text">Unidades Ativas Cadastradas</span><span class="info-box-number">{{ total_unidades }}</span></div></div>
+    <div class="col-12 col-sm-6 col-md-auto">
+        <div class="info-box bg-white shadow-none">
+            <span class="info-box-icon text-success mr-2"><i class="fas fa-user-tie"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">Delegados de Polícia Ativos</span> 
+                <span class="info-box-number text-success">{{ total_delegados }}</span>
+            </div>
+        </div>
     </div>
-     <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3"><span class="info-box-icon bg-success elevation-1"><i class="fas fa-history"></i></span><div class="info-box-content"><span class="info-box-text">Ações de Auditoria Registradas</span><span class="info-box-number">{{ total_logs|default:"0" }}</span></div></div>
+    <div class="col-12 col-sm-6 col-md-auto">
+        <div class="info-box bg-white shadow-none">
+            <span class="info-box-icon text-warning mr-2"><i class="fas fa-building"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">Unidades Ativas Cadastradas</span> 
+                <span class="info-box-number text-warning">{{ total_unidades }}</span>
+            </div>
+        </div>
+    </div>
+     <div class="col-12 col-sm-6 col-md-auto">
+        <div class="info-box bg-white shadow-none">
+            <span class="info-box-icon text-secondary mr-2"><i class="fas fa-history"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">Ações de Auditoria Registradas</span> 
+                <span class="info-box-number text-secondary">{{ total_logs|default:"0" }}</span>
+            </div>
+        </div>
     </div>
 </div>
+
+{# Linha divisória ou espaçamento maior para separar as seções #}
+<hr class="mb-4"> 
 
 <div class="row">
     <div class="col-md-12">
@@ -29,11 +70,13 @@
                 <h3 class="card-title"><i class="fas fa-rocket mr-2"></i>Ações Rápidas</h3>
             </div>
             <div class="card-body text-center">
-                <a href="{% url 'core:listar_usuarios' %}" class="btn btn-app btn-app-lg bg-info"><i class="fas fa-users"></i> Gestão de Usuários</a>
-                <a href="{% url 'core:listar_agentes' %}" class="btn btn-app btn-app-lg bg-success"><i class="fas fa-user-shield"></i> Gestão de Agentes de Pessoal</a>
-                <a href="{% url 'core:listar_unidades' %}" class="btn btn-app btn-app-lg bg-warning"><i class="fas fa-building"></i> Gestão de Unidades</a>
-                <a href="{% url 'core:admin_auditoria' %}" class="btn btn-app btn-app-lg bg-secondary"><i class="fas fa-file-contract"></i> Logs de Auditoria</a>
-            </div>        </div>
+                <a href="{% url 'core:listar_usuarios' %}" class="btn btn-app btn-app-lg bg-info"><i class="fas fa-users"></i> Gestão de Servidores</a>
+                <a href="{% url 'core:listar_agentes' %}" class="btn btn-app btn-app-lg bg-danger"><i class="fas fa-user-shield"></i> Gestão de Agentes de Pessoal</a>
+                <a href="{% url 'core:listar_delegados' %}" class="btn btn-app btn-app-lg bg-success"><i class="fas fa-user-tie"></i> Gestão de Delegados</a>
+                <a href="{% url 'core:listar_unidades' %}" class="btn btn-app btn-app-lg bg-warning"><i class="fas fa-building"></i> Gestão de Unidades</a> 
+                <a href="{% url 'core:admin_auditoria' %}" class="btn btn-app btn-app-lg bg-secondary"><i class="fas fa-file-contract"></i> Logs de Auditoria</a> 
+            </div>
+        </div>
     </div>
 </div>
 
@@ -53,7 +96,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %} {# Renomeado para extra_js para consistência #}
+{% block extra_js %}
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 <script>
   $(function () {
@@ -85,8 +128,8 @@
             yAxes: [{ 
                 ticks: { 
                     beginAtZero: true, 
-                    stepSize: 1, // Garante que o eixo Y use números inteiros para contagem
-                    callback: function(value) {if (value % 1 === 0) {return value;}} // Exibe apenas inteiros
+                    stepSize: 1, 
+                    callback: function(value) {if (value % 1 === 0) {return value;}} 
                 } 
             }] 
           }

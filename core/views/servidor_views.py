@@ -1,4 +1,4 @@
-# ARQUIVO: core/views/servidor_views.py
+# F:\dev\sigaf-novo\core\views\servidor_views.py (COMPLETO E MODIFICADO para redirecionamento de Servidor-Conferente)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -14,13 +14,34 @@ from core.utils import preparar_dados_para_web, registrar_log
 @login_required
 def dashboard_view(request):
     """
-    Dashboard principal para todos os perfis.
-    Exibe a folha de ponto pessoal do usuário, a menos que seja Administrador Geral (sem folha).
-    Se houver apenas UMA folha de ponto ativa, redireciona diretamente para ela.
+    Dashboard principal. Exibe a folha de ponto pessoal para assinatura.
+    Redireciona perfis funcionais para seus dashboards, exceto quando acessam explicitamente 'Minha Folha de Ponto'.
     """
+    # Redireciona Administrador Geral para seu dashboard
     if request.user.perfil == 'Administrador Geral':
         return redirect('core:admin_geral_dashboard')
     
+    # Redireciona Agente de Pessoal para seu dashboard
+    if request.user.perfil == 'Agente de Pessoal':
+        return redirect('core:agente_dashboard')
+
+    # Redireciona Delegados e Servidores-Conferentes para o dashboard de conferência,
+    # A MENOS que estejam acessando explicitamente a sua própria folha de ponto.
+    # Lógica para "Servidor-Conferente": é um usuário que NÃO é Admin Geral ou Agente,
+    # mas TEM unidades de atuação atribuídas (indicando responsabilidade de conferência)
+    # e não é um Delegado (que já é tratado por sua própria propriedade).
+    is_servidor_conferente = request.user.unidades_atuacao.exists() and \
+                             not request.user.is_agente_pessoal and \
+                             not request.user.is_administrador_geral and \
+                             not request.user.is_delegado # Garantir que não seja delegado
+
+    if (request.user.perfil == 'Delegado de Polícia' or is_servidor_conferente) and request.resolver_match.url_name != 'delegado_minha_folha':
+        return redirect('core:delegado_dashboard') # Redireciona para o dashboard de pendências
+
+    # Se chegou aqui, o usuário é um 'Servidor' (cargo policial sem atribuições extras),
+    # ou um Agente de Pessoal/Delegado/Servidor-Conferente acessando **sua própria folha**
+    # via o link "Minha Folha de Ponto" (que é a tela padrão do dashboard).
+
     hoje = date.today()
     trimestre_atual = (hoje.month - 1) // 3 + 1
     
@@ -36,18 +57,6 @@ def dashboard_view(request):
         context = { 'folhas_com_dados': [] }
         return render(request, 'core/dashboard.html', context)
     
-    elif num_folhas_ativas == 1:
-        folha_unica = folhas_do_usuario_queryset.first()
-        
-        # *** INÍCIO DA CORREÇÃO ***
-        # Removemos o redirecionamento incorreto para Agente de Pessoal.
-        # Agora, ao clicar em "Minha Folha de Ponto", ele será tratado como um Servidor,
-        # seguindo o fluxo normal para a tela de assinatura.
-        if request.user.perfil == 'Delegado':
-            return redirect('core:delegado_minha_folha')
-        # *** FIM DA CORREÇÃO ***
-    
-    # Lógica para mais de uma folha OU para Servidor/Agente com uma única folha
     folhas_com_dados = []
     for folha in folhas_do_usuario_queryset:
         meses_preparados_para_web = preparar_dados_para_web(folha)
@@ -63,8 +72,10 @@ def dashboard_view(request):
                 (d.servidor_assinou or d.codigo.codigo.lower() != 'livre') and not d.delegado_conferiu
                 for d in mes_dias
             )
+            # Para a própria folha, a conferência do delegado não é um impedimento total
+            # Mas podemos indicar se há dias já conferidos pelo próprio usuário
             mes_data['totalmente_conferido'] = all(d.delegado_conferiu for d in mes_dias)
-        
+   
         folhas_com_dados.append({
             'folha_ponto': folha,
             'meses': meses_preparados_para_web
@@ -105,7 +116,7 @@ def assinar_dia_view(request):
 
     dia.folha.update_status()
 
-    messages.success(request, f"Dia {dia.data_dia.strftime('%d/%m')} assinado com sucesso!")
+    messages.success(request, f"Dia {dia.data_dia.strftime('%d/%m')} assinado com sucesso.")
     return redirect(next_url)
 
 
@@ -186,3 +197,24 @@ def desfazer_mes_inteiro_view(request, folha_id, mes_num):
         messages.info(request, "Nenhuma assinatura para desfazer neste mês (dias já conferidos não podem ser desfeitos).")
 
     return redirect(next_url)
+
+# NOVO: View para "Meu Histórico de Folhas"
+@login_required
+def meu_historico_folhas_view(request):
+    """
+    Exibe todas as folhas de ponto do usuário logado, independentemente do status.
+    """
+    usuario = request.user
+    
+    # Exclui o Administrador Geral desta view
+    if usuario.perfil == 'Administrador Geral':
+        messages.error(request, "Acesso negado. Administradores Gerais não possuem histórico de folhas nesta interface.")
+        return redirect('core:admin_geral_dashboard')
+
+    folhas = FolhaPonto.objects.filter(servidor=usuario).order_by('-ano', '-trimestre')
+
+    context = {
+        'servidor': usuario,
+        'folhas': folhas,
+    }
+    return render(request, 'core/meu_historico_folhas.html', context)

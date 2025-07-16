@@ -1,3 +1,5 @@
+# core/management/commands/gerar_folhas_trimestrais.py (MODIFICADO - Gera folhas para Agentes e Delegados)
+
 import sys
 from datetime import date
 from django.core.management.base import BaseCommand
@@ -23,7 +25,7 @@ class Command(BaseCommand):
         
         self.stdout.write(f"Iniciando verificação para o {trimestre_atual}º trimestre de {ano_atual}.")
 
-        # Busca todos os usuários ativos que não são Administradores
+        # MODIFICADO: Gera folhas para QUALQUER usuário ATIVO, EXCETO Administrador Geral.
         usuarios_ativos = Usuario.objects.filter(ativo=True).exclude(perfil='Administrador Geral')
         
         folhas_criadas_count = 0

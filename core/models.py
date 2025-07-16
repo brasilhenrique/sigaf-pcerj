@@ -1,3 +1,5 @@
+# ARQUIVO: core/models.py
+
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, BaseUserManager
@@ -5,6 +7,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 class Unidade(models.Model):
     nome_unidade = models.CharField(max_length=100, unique=True)
     ativo = models.BooleanField(default=True)
+    codigo_ua = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="Código UA")
 
     def __str__(self):
         return self.nome_unidade
@@ -32,12 +35,39 @@ class UsuarioManager(BaseUserManager):
         return self.create_user(id_funcional, password, **extra_fields)
 
 class Usuario(AbstractUser):
-    PERFIL_CHOICES = [
-        ('Servidor', 'Servidor'),
-        ('Delegado', 'Delegado'),
+    # NOVOS CARGOS E PERFIS
+    # POLICIA_CARGOS devem ser usados para perfis de 'Servidor' com cargos específicos
+    POLICIA_CARGOS = [
+        ('Assistente I', 'Assistente I'),
+        ('Assistente II', 'Assistente II'),
+        ('Auxiliar Policial de Necropsia', 'Auxiliar Policial de Necropsia'),
+        ('Comissário de Polícia', 'Comissário de Polícia'),
+        ('Inspetor de Polícia', 'Inspetor de Polícia'),
+        ('Investigador Policial', 'Investigador Policial'),
+        ('Oficial de Cartório Policial', 'Oficial de Cartório Policial'),
+        ('Perito Criminal', 'Perito Criminal'),
+        ('Perito Legista', 'Perito Legista'),
+        ('Perito Papiloscopista', 'Perito Papiloscopista'),
+        ('Piloto Policial', 'Piloto Policial'),
+        ('Técnico Policial de Necropsia', 'Técnico Policial de Necropsia'),
+    ]
+
+    # NOVA PROPRIEDADE ESTÁTICA para ter a lista de nomes de cargos
+    POLICIA_CARGOS_NAMES = [cargo[0] for cargo in POLICIA_CARGOS]
+
+    # PERFIS_FUNCIONAL são os perfis com funções administrativas no sistema
+    PERFIS_FUNCIONAL = [
+        ('Delegado de Polícia', 'Delegado de Polícia'), # Delegado agora é um cargo específico, mas também um perfil funcional
         ('Agente de Pessoal', 'Agente de Pessoal'),
         ('Administrador Geral', 'Administrador Geral'),
+        # REMOVIDO: 'Conferente' não é mais um perfil primário aqui.
+        # Ele será uma atribuição adicional para servidores com POLICIA_CARGOS.
     ]
+
+    # Combina todos os tipos de perfis/cargos para o campo choices
+    # REMOVIDO: A inclusão direta de 'Conferente' aqui.
+    # A lógica de "ser conferente" será baseada na posse de unidades_atuacao
+    PERFIL_CHOICES = POLICIA_CARGOS + PERFIS_FUNCIONAL 
     
     STATUS_CHOICES = [
         ('Ativo', 'Ativo'),
@@ -49,28 +79,20 @@ class Usuario(AbstractUser):
     id_funcional = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    perfil = models.CharField(max_length=20, choices=PERFIL_CHOICES, default='Servidor')
+    perfil = models.CharField(max_length=50, choices=PERFIL_CHOICES, default='Investigador Policial')
     lotacao = models.ForeignKey(Unidade, on_delete=models.SET_NULL, null=True, blank=True, related_name='servidores')
     ativo = models.BooleanField(default=True)
     status_servidor = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ativo')
     primeiro_login = models.BooleanField(default=True)
     data_inativacao = models.DateField(null=True, blank=True)
     
-    unidades_gerenciadas = models.ManyToManyField(
+    # CAMPO RENOMEADO E GENERALIZADO
+    unidades_atuacao = models.ManyToManyField(
         Unidade,
         blank=True,
-        verbose_name="Unidades Gerenciadas",
-        # Alterado o help_text para ser mais geral, já que o perfil pode mudar
-        help_text="Selecione as unidades pelas quais este usuário pode ser responsável (para Agentes de Pessoal)." 
+        verbose_name="Unidades de Atuação (Gerência/Conferência)",
+        help_text="Selecione as unidades pelas quais este usuário pode ser responsável por gerência (Agente de Pessoal) ou conferência de folhas (Delegado de Polícia/Servidor-Conferente)." # Help text atualizado
     )
-    
-    # Removido unique=False e null=True, blank=True para username, pois AbstractUser já define
-    # o comportamento e USERNAME_FIELD garante que id_funcional é o "nome de usuário"
-    # Se você realmente precisa de um campo 'username' separado e não único, precisaria reavaliar.
-    # Por padrão, com USERNAME_FIELD='id_funcional', o campo 'username' de AbstractUser se torna redundante
-    # ou deve ser usado apenas para fins internos e não como campo de login.
-    # Manteremos como o padrão de AbstractUser, removendo a sobrescrita desnecessária.
-    # username = models.CharField(max_length=150, unique=False, null=True, blank=True) 
 
     USERNAME_FIELD = 'id_funcional'
     REQUIRED_FIELDS = ['nome', 'email']
@@ -97,12 +119,41 @@ class Usuario(AbstractUser):
 
     def save(self, *args, **kwargs):
         self.nome = self.nome.upper()
-        # Garantir que username esteja sempre em sync com id_funcional
-        self.username = self.id_funcional 
+        self.username = self.id_funcional
         super(Usuario, self).save(*args, **kwargs)
 
+    # Propriedades de conveniência para os grupos de perfis
+    @property
+    def is_policia_cargo(self):
+        # Um usuário com perfil de policial NÃO PODE ser um Agente de Pessoal, Delegado ou Admin Geral.
+        # Esta propriedade não define a capacidade de conferência, apenas o tipo de cargo base.
+        return self.perfil in self.POLICIA_CARGOS_NAMES
+
+    @property
+    def is_delegado(self):
+        return self.perfil == 'Delegado de Polícia'
+
+    @property
+    def is_agente_pessoal(self):
+        return self.perfil == 'Agente de Pessoal'
+    
+    @property
+    def is_conferente(self): # PROPRIEDADE REVISADA: Agora baseada em unidades_atuacao
+        # Um usuário é considerado 'Conferente' se não é Admin Geral, não é Agente de Pessoal,
+        # e possui unidades de atuação atribuídas (indicando responsabilidade de conferência)
+        # e não é um Delegado (que já é tratado por sua própria propriedade).
+        # A exclusão de `is_delegado` aqui garante que a lógica de permissão de delegado não se sobreponha a este.
+        return (not self.is_administrador_geral and 
+                not self.is_agente_pessoal and
+                not self.is_delegado and
+                self.unidades_atuacao.exists())
+
+    @property
+    def is_administrador_geral(self):
+        return self.perfil == 'Administrador Geral'
+
 class CodigoOcorrencia(models.Model):
-    codigo = models.CharField(max_length=10, unique=True) # Adicionado unique=True
+    codigo = models.CharField(max_length=10, unique=True) 
     denominacao = models.CharField(max_length=255)
     descricao_completa = models.TextField(blank=True, null=True)
 
@@ -128,7 +179,8 @@ class FolhaPonto(models.Model):
     unidade_id_geracao = models.ForeignKey(Unidade, on_delete=models.SET_NULL, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Em Andamento')
     data_geracao = models.DateTimeField(auto_now_add=True)
-    ativa = models.BooleanField(default=True) # Este campo 'ativa' pode ser redundante com 'status'='Arquivada' ou 'Em Andamento'
+    ativa = models.BooleanField(default=True)
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
 
     def __str__(self):
         return f"Folha de {self.servidor.nome} - {self.get_trimestre_display()} de {self.ano}"
@@ -145,11 +197,12 @@ class FolhaPonto(models.Model):
             servidor_assinou=False
         ).exists()
 
-        # Verifica se há dias assinados pelo servidor, mas não conferidos pelo delegado
+        # Verifica se há dias não conferidos pelo delegado
+        # (Não importa se assinado ou não para a conferência do delegado, conforme nova regra)
         pendencia_conferencia = self.dias.filter(
-            servidor_assinou=True, 
             delegado_conferiu=False
         ).exists()
+
 
         # Se não há pendências de assinatura E não há pendências de conferência, a folha está concluída
         if not pendencia_assinatura and not pendencia_conferencia:

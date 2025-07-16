@@ -4,6 +4,44 @@
 {% block page_title %}{{ titulo }}{% endblock %} {# Adicionado para AdminLTE #}
 {% block page_title_header %}{{ titulo }}{% endblock %} {# Adicionado para AdminLTE #}
 
+{% block extra_css %}
+<style>
+    /* Estilos para o contêiner de checkboxes */
+    .small-checkbox-container .form-check {
+        margin-bottom: 0.2rem; /* Espaçamento menor entre os itens */
+        display: flex; /* Manter display flex para alinhar checkbox com label */
+        align-items: center; /* Alinha verticalmente item dentro do flex */
+        width: 100%; /* Ocupa a largura total da sua célula/coluna */
+    }
+
+    /* Ajuste para o input do checkbox */
+    .small-checkbox-container .form-check-input {
+        vertical-align: middle; /* Alinha verticalmente ao meio */
+        margin-top: 0; /* Remove margem superior padrão que pode causar desalinhamento */
+        position: relative; /* Permite posicionamento relativo com 'top' */
+        top: -1px; /* Ajuste fino para mover ligeiramente para cima */
+        flex-shrink: 0; /* Impede que o checkbox encolha */
+    }
+
+    /* Ajuste para o label do checkbox */
+    .small-checkbox-container .form-check-label {
+        font-size: 0.6em; /* Diminui o tamanho da fonte */
+        vertical-align: middle; /* Garante que o texto também esteja alinhado */
+        line-height: 1.2; /* Controla a altura da linha para texto multilinha */
+        padding-left: 0.25em; /* Espaçamento entre o checkbox e o texto */
+        white-space: normal; /* Permite que o texto quebre linhas */
+        word-wrap: break-word; /* Força a quebra de palavras longas */
+        overflow-wrap: break-word; /* Propriedade mais moderna para word-wrap */
+        display: inline-block; /* Permite controlar largura e quebra de linha */
+    }
+
+    /* Estilo para a célula/coluna que contém cada checkbox */
+    .small-checkbox-item-col {
+        text-align: left !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
     <div class="col-md-8">
@@ -88,12 +126,34 @@
                     </div>
                     {# Adicionado campo status_servidor para edição #}
                     {% if form.status_servidor %}
-                        <div class="form-group mb-3">
-                            <label for="{{ form.status_servidor.id_for_label }}" class="form-label">{{ form.status_servidor.label }}</label>
-                            {{ form.status_servidor }}
-                            {% if form.status_servidor.errors %}<div class="text-danger small">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
-                        </div>
+                    <div class="form-group mb-3">
+                        <label for="{{ form.status_servidor.id_for_label }}" class="form-label">{{ form.status_servidor.label }}</label>
+                        {{ form.status_servidor }}
+                        {% if form.status_servidor.errors %}<div class="text-danger small">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
+                    </div>
                     {% endif %}
+
+                    {# NOVO: Campo unidades_atuacao #}
+                    <div class="form-group mb-3">
+                        <label>{{ form.unidades_atuacao.label }}</label>
+                        <div class="row p-2 small-checkbox-container" style="background-color: #f8f9fa; border-radius: 5px;">
+                            {# MUDANÇA AQUI: col-md-4 para 3 colunas, e small-checkbox-item-col para alinhar à esquerda #}
+                            {% for subwidget in form.unidades_atuacao.subwidgets %}
+                            <div class="col-md-4 small-checkbox-item-col"> {# col-md-4 para 3 colunas #}
+                                <div class="form-check">
+                                    {{ subwidget.tag }}
+                                    <label class="form-check-label" for="{{ subwidget.id_for_label }}">
+                                        {{ subwidget.choice_label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                                <p class="col-12 text-muted">Nenhuma unidade ativa disponível para seleção.</p>
+                            {% endfor %}
+                        </div>
+                        {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
+                        <small class="form-text text-muted">{{ form.unidades_atuacao.help_text }}</small>
+                    </div>
 
                     <hr>
                     <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}

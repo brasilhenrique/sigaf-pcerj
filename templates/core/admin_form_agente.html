@@ -1,9 +1,45 @@
+{# F:\dev\sigaf-novo\templates\core\admin_form_agente.html (MODIFICADO - Renderização manual de unidades_atuacao) #}
 {% extends 'base_adminlte.html' %}
-
-{% block title %}{{ titulo }}{% endblock %}
+{% load static %}
 
 {% block page_title %}{{ titulo }}{% endblock %}
 {% block page_title_header %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-check-label-small {
+        font-size: 0.8em !important; /* Ajustado para um tamanho um pouco maior, ou remova se não for necessário */
+        vertical-align: middle;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        display: block;
+        padding-left: 0.25em;
+    }
+    .small-checkbox-container .form-check {
+        margin-bottom: 0.4rem;
+    }
+    .small-checkbox-container .col-md-4 {
+        padding-right: 5px;
+        padding-left: 5px;
+    }
+    /* Estilo para forçar a visibilidade e rolagem para o campo de unidades */
+    .checkbox-scroll-area {
+        max-height: 250px; /* Altura máxima para ativar o scroll */
+        overflow-y: auto; /* Adiciona scroll vertical quando o conteúdo excede a altura máxima */
+        border: 1px solid #dee2e6; /* Borda para visualizar a área de scroll */
+        padding: 10px; /* Padding interno */
+        background-color: #f8f9fa; /* Fundo claro */
+        border-radius: 5px; /* Cantos arredondados */
+    }
+    /* Estilo para garantir que os labels dos checkboxes não fiquem escondidos */
+    .checkbox-scroll-area .form-check-label {
+        font-size: 0.9em; /* Ajuste o tamanho da fonte se necessário */
+        padding-left: 0.5em; /* Espaçamento entre o checkbox e o texto */
+        line-height: 1.2;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -55,23 +91,25 @@
                     <h4 class="mt-4">Permissões</h4>
                     <hr>
                     <div class="form-group">
-                        <label>Unidades Gerenciadas (O agente terá permissão para gerenciar os servidores destas unidades)</label>
-                        <div class="row p-2" style="background-color: #f8f9fa; border-radius: 5px;">
-                            {# Renderiza os checkboxes de unidades gerenciadas usando o campo do formulário #}
-                            {% for checkbox in form.unidades_gerenciadas %}
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    {{ checkbox.tag }} {# Renderiza <input type="checkbox"> #}
-                                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                        {{ checkbox.choice_label }} {# Texto do label (nome da unidade) #}
-                                    </label>
+                        <label>Unidades de Atuação (O agente terá permissão para gerenciar os servidores destas unidades)</label>
+                        <div class="checkbox-scroll-area">
+                            {# RENDERIZAÇÃO MANUAL RESTAURADA #}
+                            <div class="row p-2 small-checkbox-container">
+                                {% for subwidget in form.unidades_atuacao.subwidgets %} {# Correção aqui: [cite: 1816] #}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        {{ subwidget.tag }}
+                                        <label class="form-check-label form-check-label-small" for="{{ subwidget.id_for_label }}">
+                                            {{ subwidget.choice_label }}
+                                        </label>
+                                    </div>
                                 </div>
+                                {% empty %}
+                                    <p class="col-12">Nenhuma unidade ativa encontrada. Certifique-se de cadastrar unidades antes de criar/editar agentes.</p>
+                                {% endfor %}
                             </div>
-                            {% empty %}
-                                <p class="col-12">Nenhuma unidade ativa encontrada. Certifique-se de cadastrar unidades antes de criar/editar agentes.</p>
-                            {% endfor %}
                         </div>
-                         {% if form.unidades_gerenciadas.errors %}<div class="text-danger small mt-1">{{ form.unidades_gerenciadas.errors|first }}</div>{% endif %}
+                        {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
                     </div>
                     
                     {# AJUSTE AQUI para o campo 'ativo' - Renderização manual do checkbox #}

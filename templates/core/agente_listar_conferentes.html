@@ -1,0 +1,101 @@
+{# templates/core/agente_listar_conferentes.html #}
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Gestão de Conferentes{% endblock %}
+{% block page_title_header %}Gestão de Conferentes{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="row">
+    {# Coluna para a lista de usuários que podem ser atribuídos como Conferentes #}
+    <div class="col-md-6">
+        <div class="card card-info card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user-plus mr-1"></i> Servidores para Atribuir como Conferente</h3>
+            </div>
+            <div class="card-body p-0">
+                {% if usuarios_candidatos_conferente %}
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>ID Funcional</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios_candidatos_conferente %}
+                        <tr>
+                            <td>{{ usuario.nome }}</td>
+                            <td>{{ usuario.id_funcional }}</td>
+                            <td>
+                                <a href="{% url 'core:atribuir_conferente' usuario.id %}" class="btn btn-sm btn-primary" title="Atribuir como Conferente">
+                                    <i class="fas fa-user-tag"></i> Atribuir
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-info text-center m-3">
+                    Nenhum servidor disponível para atribuição como Conferente nas suas unidades de atuação.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Coluna para a lista de Conferentes/Delegados existentes #}
+    <div class="col-md-6">
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user-check mr-1"></i> Conferentes e Delegados Atribuídos</h3>
+            </div>
+            <div class="card-body p-0">
+                {% if conferentes_existentes %}
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Perfil</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for conferente in conferentes_existentes %}
+                        <tr>
+                            <td>{{ conferente.nome }}</td>
+                            <td><span class="badge {% if conferente.is_delegado %}badge-info{% else %}badge-success{% endif %}">{{ conferente.perfil }}</span></td>
+                            <td>
+                                {% if not conferente.is_delegado %} {# Delegados não podem ter seu perfil removido por aqui #}
+                                <form action="{% url 'core:remover_conferente' conferente.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Remover Conferente" onclick="return confirm('Tem certeza que deseja remover o status de Conferente de {{ conferente.nome }}?');">
+                                        <i class="fas fa-user-times"></i> Remover
+                                    </button>
+                                </form>
+                                {% else %}
+                                    <span class="text-muted small">Gerenciado via Gestão de Delegados</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-warning text-center m-3">
+                    Nenhum Conferente ou Delegado atribuído nas suas unidades de atuação.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

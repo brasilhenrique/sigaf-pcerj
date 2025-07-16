@@ -1,0 +1,84 @@
+{# templates/core/agente_atribuir_conferente.html #}
+{% extends 'base_adminlte.html' %}
+{% load static %}
+
+{% block page_title %}Atribuir Conferente: {{ usuario_alvo.nome }}{% endblock %}
+{% block page_title_header %}Atribuir Conferente: {{ usuario_alvo.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-check-label-small {
+        font-size: 0.7em !important;
+        vertical-align: middle;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        display: block;
+        padding-left: 0.25em;
+    }
+    .small-checkbox-container .form-check {
+        margin-bottom: 0.4rem;
+    }
+    .small-checkbox-container .col-md-4 {
+        padding-right: 5px;
+        padding-left: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'core:listar_conferentes' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar para Gestão de Conferentes
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">{{ titulo }}</h3>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="card-body">
+                    <p>Você está atribuindo o servidor <strong>{{ usuario_alvo.nome }} (ID: {{ usuario_alvo.id_funcional }})</strong> como Conferente.</p>
+                    <p class="text-muted">Selecione as unidades pelas quais este servidor poderá conferir folhas de ponto.</p>
+                    <hr>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="form-group">
+                        <label>{{ form.unidades_atuacao.label }}</label>
+                        <div class="row p-2 small-checkbox-container" style="background-color: #f8f9fa; border-radius: 5px;">
+                            {% for subwidget in form.unidades_atuacao.subwidgets %}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ subwidget.tag }}
+                                    <label class="form-check-label form-check-label-small" for="{{ subwidget.id_for_label }}">
+                                        {{ subwidget.choice_label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                                <p class="col-12">Nenhuma unidade ativa encontrada para atribuição.</p>
+                            {% endfor %}
+                        </div>
+                        {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary float-right">Salvar Atribuição</button>
+                    <a href="{% url 'core:listar_conferentes' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,14 +2,21 @@
 ├── sigaf_project
 │   ├── __init__.py
 │   ├── asgi.py
-│   ├── settings.py
 │   ├── urls.py
 │   ├── wsgi.py
+│   ├── settings
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── development.py
+│   │   ├── production.py
+│   │   └── __pycache__
+│   │       ├── __init__.cpython-313.pyc
+│   │       ├── development.cpython-313.pyc
+│   │       └── base.cpython-313.pyc
 │   └── __pycache__
 │       ├── __init__.cpython-313.pyc
-│       ├── settings.cpython-313.pyc
-│       ├── wsgi.cpython-313.pyc
-│       └── urls.cpython-313.pyc
+│       ├── urls.cpython-313.pyc
+│       └── wsgi.cpython-313.pyc
 ├── core
 │   ├── __init__.py
 │   ├── admin.py
@@ -18,18 +25,8 @@
 │   ├── tests.py
 │   ├── forms.py
 │   ├── urls.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-313.pyc
-│   │   ├── apps.cpython-313.pyc
-│   │   ├── models.cpython-313.pyc
-│   │   ├── admin.cpython-313.pyc
-│   │   ├── signals.cpython-313.pyc
-│   │   ├── utils.cpython-313.pyc
-│   │   ├── urls.cpython-313.pyc
-│   │   └── forms.cpython-313.pyc
 │   ├── migrations
 │   │   ├── __init__.py
-│   │   ├── 0001_initial.py
 │   │   ├── __pycache__
 │   │   │   ├── __init__.cpython-313.pyc
 │   │   │   ├── 0005_alter_folhaponto_status_alter_folhaponto_trimestre.cpython-313.pyc
@@ -38,15 +35,19 @@
 │   │   │   ├── 0007_folhaponto_motivo_status_and_more.cpython-313.pyc
 │   │   │   ├── 0003_transferencia.cpython-313.pyc
 │   │   │   ├── 0004_folhaponto_ativa_alter_folhaponto_trimestre.cpython-313.pyc
+│   │   │   ├── 0008_remove_folhaponto_motivo_status_and_more.cpython-313.pyc
+│   │   │   ├── 0009_folhaponto_cargo_servidor_na_folha_and_more.cpython-313.pyc
+│   │   │   ├── 0010_unidade_codigo_ua.cpython-313.pyc
+│   │   │   ├── 0002_folhaponto_cargo_servidor_na_folha_unidade_codigo_ua.cpython-313.pyc
+│   │   │   ├── 0002_add_codigo_ua_and_cargo_na_folha.cpython-313.pyc
 │   │   │   ├── 0001_initial.cpython-313.pyc
-│   │   │   └── 0008_remove_folhaponto_motivo_status_and_more.cpython-313.pyc
-│   │   ├── 0002_popular_codigos_ocorrencia.py
-│   │   ├── 0003_transferencia.py
-│   │   ├── 0004_folhaponto_ativa_alter_folhaponto_trimestre.py
-│   │   ├── 0005_alter_folhaponto_status_alter_folhaponto_trimestre.py
-│   │   ├── 0006_logauditoria.py
-│   │   ├── 0007_folhaponto_motivo_status_and_more.py
-│   │   └── 0008_remove_folhaponto_motivo_status_and_more.py
+│   │   │   ├── 0002_unidade_codigo_ua.cpython-313.pyc
+│   │   │   ├── 0003_folhaponto_observacoes.cpython-313.pyc
+│   │   │   └── 0004_remove_usuario_unidades_gerenciadas_and_more.cpython-313.pyc
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_unidade_codigo_ua.py
+│   │   ├── 0003_folhaponto_observacoes.py
+│   │   └── 0004_remove_usuario_unidades_gerenciadas_and_more.py
 │   ├── signals.py
 │   ├── utils.py
 │   ├── views
@@ -55,27 +56,49 @@
 │   │   ├── __pycache__
 │   │   │   ├── __init__.cpython-313.pyc
 │   │   │   ├── auth_views.cpython-313.pyc
-│   │   │   ├── delegado_views.cpython-313.pyc
+│   │   │   ├── delegado_gerenciamento_views.cpython-313.pyc
 │   │   │   ├── servidor_views.cpython-313.pyc
-│   │   │   └── admin_views.cpython-313.pyc
+│   │   │   ├── admin_views.cpython-313.pyc
+│   │   │   └── delegado_views.cpython-313.pyc
 │   │   ├── servidor_views.py
 │   │   ├── delegado_views.py
 │   │   ├── admin_views.py
-│   │   └── agente
-│   │       ├── __init__.py
-│   │       ├── dashboard_views.py
-│   │       ├── usuario_views.py
-│   │       ├── folha_ponto_views.py
-│   │       ├── pdf_views.py
-│   │       └── __pycache__
-│   │           ├── __init__.cpython-313.pyc
-│   │           ├── usuario_views.cpython-313.pyc
-│   │           ├── pdf_views.cpython-313.pyc
-│   │           ├── dashboard_views.cpython-313.pyc
-│   │           └── folha_ponto_views.cpython-313.pyc
-│   └── management
-│       └── commands
-│           └── gerar_folhas_trimestrais.py
+│   │   ├── agente
+│   │   │   ├── __init__.py
+│   │   │   ├── dashboard_views.py
+│   │   │   ├── usuario_views.py
+│   │   │   ├── folha_ponto_views.py
+│   │   │   ├── pdf_views.py
+│   │   │   └── __pycache__
+│   │   │       ├── __init__.cpython-313.pyc
+│   │   │       ├── pdf_views.cpython-313.pyc
+│   │   │       ├── dashboard_views.cpython-313.pyc
+│   │   │       ├── usuario_views.cpython-313.pyc
+│   │   │       └── folha_ponto_views.cpython-313.pyc
+│   │   └── delegado_gerenciamento_views.py
+│   ├── management
+│   │   ├── commands
+│   │   │   ├── gerar_folhas_trimestrais.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── populate_codigos.cpython-313.pyc
+│   │   │   │   ├── populate_unidades.cpython-313.pyc
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── populate_codigos_ocorrencia.cpython-313.pyc
+│   │   │   ├── populate_unidades.py
+│   │   │   ├── populate_codigos_ocorrencia.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       └── __init__.cpython-313.pyc
+│   └── __pycache__
+│       ├── __init__.cpython-313.pyc
+│       ├── apps.cpython-313.pyc
+│       ├── utils.cpython-313.pyc
+│       ├── signals.cpython-313.pyc
+│       ├── urls.cpython-313.pyc
+│       ├── admin.cpython-313.pyc
+│       ├── models.cpython-313.pyc
+│       └── forms.cpython-313.pyc
 ├── venv
 │   ├── Include
 │   ├── Lib
@@ -3132,7 +3155,8 @@
 │   │       │   │   │   │   │   ├── createsuperuser.py
 │   │       │   │   │   │   │   └── __pycache__
 │   │       │   │   │   │   │       ├── __init__.cpython-313.pyc
-│   │       │   │   │   │   │       └── changepassword.cpython-313.pyc
+│   │       │   │   │   │   │       ├── changepassword.cpython-313.pyc
+│   │       │   │   │   │   │       └── createsuperuser.cpython-313.pyc
 │   │       │   │   │   │   └── __pycache__
 │   │       │   │   │   │       └── __init__.cpython-313.pyc
 │   │       │   │   │   ├── migrations
@@ -6788,7 +6812,8 @@
 │   │       │   │   │   │       ├── __init__.cpython-313.pyc
 │   │       │   │   │   │       ├── runserver.cpython-313.pyc
 │   │       │   │   │   │       ├── makemigrations.cpython-313.pyc
-│   │       │   │   │   │       └── migrate.cpython-313.pyc
+│   │       │   │   │   │       ├── migrate.cpython-313.pyc
+│   │       │   │   │   │       └── shell.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
 │   │       │   │   │       ├── __init__.cpython-313.pyc
 │   │       │   │   │       ├── base.cpython-313.pyc
@@ -7898,6 +7923,19 @@
 │   │       │   │   │   ├── spinners.py
 │   │       │   │   │   ├── status_codes.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── main.cpython-313.pyc
+│   │       │   │   │       ├── autocompletion.cpython-313.pyc
+│   │       │   │   │       ├── main_parser.cpython-313.pyc
+│   │       │   │   │       ├── spinners.cpython-313.pyc
+│   │       │   │   │       ├── cmdoptions.cpython-313.pyc
+│   │       │   │   │       ├── parser.cpython-313.pyc
+│   │       │   │   │       ├── status_codes.cpython-313.pyc
+│   │       │   │   │       ├── base_command.cpython-313.pyc
+│   │       │   │   │       ├── command_context.cpython-313.pyc
+│   │       │   │   │       ├── progress_bars.cpython-313.pyc
+│   │       │   │   │       ├── req_command.cpython-313.pyc
+│   │       │   │   │       └── index_command.cpython-313.pyc
 │   │       │   │   ├── commands
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── cache.py
@@ -7919,6 +7957,9 @@
 │   │       │   │   │   ├── uninstall.py
 │   │       │   │   │   ├── wheel.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── install.cpython-313.pyc
+│   │       │   │   │       └── freeze.cpython-313.pyc
 │   │       │   │   ├── distributions
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── base.py
@@ -7926,18 +7967,30 @@
 │   │       │   │   │   ├── sdist.py
 │   │       │   │   │   ├── wheel.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── base.cpython-313.pyc
+│   │       │   │   │       ├── sdist.cpython-313.pyc
+│   │       │   │   │       ├── wheel.cpython-313.pyc
+│   │       │   │   │       └── installed.cpython-313.pyc
 │   │       │   │   ├── index
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── collector.py
 │   │       │   │   │   ├── package_finder.py
 │   │       │   │   │   ├── sources.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── collector.cpython-313.pyc
+│   │       │   │   │       ├── sources.cpython-313.pyc
+│   │       │   │   │       └── package_finder.cpython-313.pyc
 │   │       │   │   ├── locations
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _distutils.py
 │   │       │   │   │   ├── _sysconfig.py
 │   │       │   │   │   ├── base.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── _sysconfig.cpython-313.pyc
+│   │       │   │   │       └── base.cpython-313.pyc
 │   │       │   │   ├── metadata
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _json.py
@@ -7949,7 +8002,14 @@
 │   │       │   │   │   │   ├── _dists.py
 │   │       │   │   │   │   ├── _envs.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── _dists.cpython-313.pyc
+│   │       │   │   │   │       ├── _compat.cpython-313.pyc
+│   │       │   │   │   │       └── _envs.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── base.cpython-313.pyc
+│   │       │   │   │       └── _json.cpython-313.pyc
 │   │       │   │   ├── models
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── candidate.py
@@ -7965,6 +8025,18 @@
 │   │       │   │   │   ├── target_python.py
 │   │       │   │   │   ├── wheel.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── scheme.cpython-313.pyc
+│   │       │   │   │       ├── direct_url.cpython-313.pyc
+│   │       │   │   │       ├── format_control.cpython-313.pyc
+│   │       │   │   │       ├── index.cpython-313.pyc
+│   │       │   │   │       ├── target_python.cpython-313.pyc
+│   │       │   │   │       ├── link.cpython-313.pyc
+│   │       │   │   │       ├── search_scope.cpython-313.pyc
+│   │       │   │   │       ├── candidate.cpython-313.pyc
+│   │       │   │   │       ├── selection_prefs.cpython-313.pyc
+│   │       │   │   │       ├── wheel.cpython-313.pyc
+│   │       │   │   │       └── installation_report.cpython-313.pyc
 │   │       │   │   ├── network
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── auth.py
@@ -7975,6 +8047,13 @@
 │   │       │   │   │   ├── utils.py
 │   │       │   │   │   ├── xmlrpc.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── session.cpython-313.pyc
+│   │       │   │   │       ├── auth.cpython-313.pyc
+│   │       │   │   │       ├── cache.cpython-313.pyc
+│   │       │   │   │       ├── utils.cpython-313.pyc
+│   │       │   │   │       ├── download.cpython-313.pyc
+│   │       │   │   │       └── lazy_wheel.cpython-313.pyc
 │   │       │   │   ├── operations
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── check.py
@@ -7990,12 +8069,27 @@
 │   │       │   │   │   │   ├── wheel_editable.py
 │   │       │   │   │   │   ├── wheel_legacy.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── metadata.cpython-313.pyc
+│   │       │   │   │   │       ├── metadata_editable.cpython-313.pyc
+│   │       │   │   │   │       ├── metadata_legacy.cpython-313.pyc
+│   │       │   │   │   │       ├── build_tracker.cpython-313.pyc
+│   │       │   │   │   │       ├── wheel.cpython-313.pyc
+│   │       │   │   │   │       ├── wheel_editable.cpython-313.pyc
+│   │       │   │   │   │       └── wheel_legacy.cpython-313.pyc
 │   │       │   │   │   ├── install
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── editable_legacy.py
 │   │       │   │   │   │   ├── wheel.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── editable_legacy.cpython-313.pyc
+│   │       │   │   │   │       └── wheel.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── prepare.cpython-313.pyc
+│   │       │   │   │       ├── check.cpython-313.pyc
+│   │       │   │   │       └── freeze.cpython-313.pyc
 │   │       │   │   ├── req
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── constructors.py
@@ -8005,6 +8099,13 @@
 │   │       │   │   │   ├── req_set.py
 │   │       │   │   │   ├── req_uninstall.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── req_install.cpython-313.pyc
+│   │       │   │   │       ├── req_uninstall.cpython-313.pyc
+│   │       │   │   │       ├── req_file.cpython-313.pyc
+│   │       │   │   │       ├── req_set.cpython-313.pyc
+│   │       │   │   │       ├── constructors.cpython-313.pyc
+│   │       │   │   │       └── req_dependency_group.cpython-313.pyc
 │   │       │   │   ├── resolution
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── base.py
@@ -8023,7 +8124,18 @@
 │   │       │   │   │   │   ├── requirements.py
 │   │       │   │   │   │   ├── resolver.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── resolver.cpython-313.pyc
+│   │       │   │   │   │       ├── provider.cpython-313.pyc
+│   │       │   │   │   │       ├── base.cpython-313.pyc
+│   │       │   │   │   │       ├── candidates.cpython-313.pyc
+│   │       │   │   │   │       ├── factory.cpython-313.pyc
+│   │       │   │   │   │       ├── found_candidates.cpython-313.pyc
+│   │       │   │   │   │       ├── requirements.cpython-313.pyc
+│   │       │   │   │   │       └── reporter.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       └── base.cpython-313.pyc
 │   │       │   │   ├── utils
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _jaraco_text.py
@@ -8052,6 +8164,30 @@
 │   │       │   │   │   ├── virtualenv.py
 │   │       │   │   │   ├── wheel.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── _log.cpython-313.pyc
+│   │       │   │   │       ├── compat.cpython-313.pyc
+│   │       │   │   │       ├── logging.cpython-313.pyc
+│   │       │   │   │       ├── deprecation.cpython-313.pyc
+│   │       │   │   │       ├── misc.cpython-313.pyc
+│   │       │   │   │       ├── virtualenv.cpython-313.pyc
+│   │       │   │   │       ├── appdirs.cpython-313.pyc
+│   │       │   │   │       ├── retry.cpython-313.pyc
+│   │       │   │   │       ├── egg_link.cpython-313.pyc
+│   │       │   │   │       ├── urls.cpython-313.pyc
+│   │       │   │   │       ├── packaging.cpython-313.pyc
+│   │       │   │   │       ├── subprocess.cpython-313.pyc
+│   │       │   │   │       ├── temp_dir.cpython-313.pyc
+│   │       │   │   │       ├── compatibility_tags.cpython-313.pyc
+│   │       │   │   │       ├── hashes.cpython-313.pyc
+│   │       │   │   │       ├── filesystem.cpython-313.pyc
+│   │       │   │   │       ├── filetypes.cpython-313.pyc
+│   │       │   │   │       ├── glibc.cpython-313.pyc
+│   │       │   │   │       ├── setuptools_build.cpython-313.pyc
+│   │       │   │   │       ├── unpacking.cpython-313.pyc
+│   │       │   │   │       ├── wheel.cpython-313.pyc
+│   │       │   │   │       ├── entrypoints.cpython-313.pyc
+│   │       │   │   │       └── direct_url_helpers.cpython-313.pyc
 │   │       │   │   ├── vcs
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── bazaar.py
@@ -8060,7 +8196,21 @@
 │   │       │   │   │   ├── subversion.py
 │   │       │   │   │   ├── versioncontrol.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── bazaar.cpython-313.pyc
+│   │       │   │   │       ├── versioncontrol.cpython-313.pyc
+│   │       │   │   │       ├── git.cpython-313.pyc
+│   │       │   │   │       ├── mercurial.cpython-313.pyc
+│   │       │   │   │       └── subversion.cpython-313.pyc
 │   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       ├── build_env.cpython-313.pyc
+│   │       │   │       ├── exceptions.cpython-313.pyc
+│   │       │   │       ├── configuration.cpython-313.pyc
+│   │       │   │       ├── self_outdated_check.cpython-313.pyc
+│   │       │   │       ├── pyproject.cpython-313.pyc
+│   │       │   │       ├── cache.cpython-313.pyc
+│   │       │   │       └── wheel_builder.cpython-313.pyc
 │   │       │   ├── _vendor
 │   │       │   │   ├── __init__.py
 │   │       │   │   ├── typing_extensions.py
@@ -8081,7 +8231,17 @@
 │   │       │   │   │   │   ├── file_cache.py
 │   │       │   │   │   │   ├── redis_cache.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── file_cache.cpython-313.pyc
+│   │       │   │   │   │       └── redis_cache.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── adapter.cpython-313.pyc
+│   │       │   │   │       ├── cache.cpython-313.pyc
+│   │       │   │   │       ├── controller.cpython-313.pyc
+│   │       │   │   │       ├── serialize.cpython-313.pyc
+│   │       │   │   │       ├── filewrapper.cpython-313.pyc
+│   │       │   │   │       └── wrapper.cpython-313.pyc
 │   │       │   │   ├── certifi
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __main__.py
@@ -8089,6 +8249,8 @@
 │   │       │   │   │   ├── core.py
 │   │       │   │   │   ├── py.typed
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       └── core.cpython-313.pyc
 │   │       │   │   ├── dependency_groups
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __main__.py
@@ -8098,6 +8260,8 @@
 │   │       │   │   │   ├── _toml_compat.py
 │   │       │   │   │   ├── py.typed
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       └── _implementation.cpython-313.pyc
 │   │       │   │   ├── distlib
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── compat.py
@@ -8119,6 +8283,11 @@
 │   │       │   │   │   ├── w64.exe
 │   │       │   │   │   ├── wheel.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── scripts.cpython-313.pyc
+│   │       │   │   │       ├── compat.cpython-313.pyc
+│   │       │   │   │       ├── resources.cpython-313.pyc
+│   │       │   │   │       └── util.cpython-313.pyc
 │   │       │   │   ├── distro
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __main__.py
@@ -8136,12 +8305,21 @@
 │   │       │   │   │   ├── py.typed
 │   │       │   │   │   ├── uts46data.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── core.cpython-313.pyc
+│   │       │   │   │       ├── idnadata.cpython-313.pyc
+│   │       │   │   │       ├── intranges.cpython-313.pyc
+│   │       │   │   │       └── package_data.cpython-313.pyc
 │   │       │   │   ├── msgpack
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── exceptions.py
 │   │       │   │   │   ├── ext.py
 │   │       │   │   │   ├── fallback.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── exceptions.cpython-313.pyc
+│   │       │   │   │       ├── ext.cpython-313.pyc
+│   │       │   │   │       └── fallback.cpython-313.pyc
 │   │       │   │   ├── packaging
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _elffile.py
@@ -8163,6 +8341,19 @@
 │   │       │   │   │   │   ├── _spdx.py
 │   │       │   │   │   │   └── __pycache__
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── version.cpython-313.pyc
+│   │       │   │   │       ├── _structures.cpython-313.pyc
+│   │       │   │   │       ├── requirements.cpython-313.pyc
+│   │       │   │   │       ├── _parser.cpython-313.pyc
+│   │       │   │   │       ├── _tokenizer.cpython-313.pyc
+│   │       │   │   │       ├── specifiers.cpython-313.pyc
+│   │       │   │   │       ├── utils.cpython-313.pyc
+│   │       │   │   │       ├── tags.cpython-313.pyc
+│   │       │   │   │       ├── _manylinux.cpython-313.pyc
+│   │       │   │   │       ├── _elffile.cpython-313.pyc
+│   │       │   │   │       ├── _musllinux.cpython-313.pyc
+│   │       │   │   │       └── markers.cpython-313.pyc
 │   │       │   │   ├── pkg_resources
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   └── __pycache__
@@ -8177,6 +8368,10 @@
 │   │       │   │   │   ├── version.py
 │   │       │   │   │   ├── windows.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── api.cpython-313.pyc
+│   │       │   │   │       ├── version.cpython-313.pyc
+│   │       │   │   │       └── windows.cpython-313.pyc
 │   │       │   │   ├── pygments
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __main__.py
@@ -8196,6 +8391,7 @@
 │   │       │   │   │   ├── filters
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       └── __init__.cpython-313.pyc
 │   │       │   │   │   ├── formatters
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── _mapping.py
@@ -8205,11 +8401,24 @@
 │   │       │   │   │   │   ├── _mapping.py
 │   │       │   │   │   │   ├── python.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       └── _mapping.cpython-313.pyc
 │   │       │   │   │   ├── styles
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── _mapping.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       └── _mapping.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── modeline.cpython-313.pyc
+│   │       │   │   │       ├── plugin.cpython-313.pyc
+│   │       │   │   │       ├── util.cpython-313.pyc
+│   │       │   │   │       ├── token.cpython-313.pyc
+│   │       │   │   │       ├── lexer.cpython-313.pyc
+│   │       │   │   │       ├── filter.cpython-313.pyc
+│   │       │   │   │       ├── regexopt.cpython-313.pyc
+│   │       │   │   │       └── style.cpython-313.pyc
 │   │       │   │   ├── pyproject_hooks
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _impl.py
@@ -8218,7 +8427,10 @@
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── _in_process.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       └── __init__.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       └── _impl.cpython-313.pyc
 │   │       │   │   ├── requests
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __version__.py
@@ -8239,6 +8451,23 @@
 │   │       │   │   │   ├── structures.py
 │   │       │   │   │   ├── utils.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── exceptions.cpython-313.pyc
+│   │       │   │   │       ├── compat.cpython-313.pyc
+│   │       │   │   │       ├── packages.cpython-313.pyc
+│   │       │   │   │       ├── utils.cpython-313.pyc
+│   │       │   │   │       ├── certs.cpython-313.pyc
+│   │       │   │   │       ├── __version__.cpython-313.pyc
+│   │       │   │   │       ├── _internal_utils.cpython-313.pyc
+│   │       │   │   │       ├── cookies.cpython-313.pyc
+│   │       │   │   │       ├── structures.cpython-313.pyc
+│   │       │   │   │       ├── api.cpython-313.pyc
+│   │       │   │   │       ├── sessions.cpython-313.pyc
+│   │       │   │   │       ├── adapters.cpython-313.pyc
+│   │       │   │   │       ├── auth.cpython-313.pyc
+│   │       │   │   │       ├── models.cpython-313.pyc
+│   │       │   │   │       ├── hooks.cpython-313.pyc
+│   │       │   │   │       └── status_codes.cpython-313.pyc
 │   │       │   │   ├── resolvelib
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── providers.py
@@ -8252,7 +8481,16 @@
 │   │       │   │   │   │   ├── exceptions.py
 │   │       │   │   │   │   ├── resolution.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── abstract.cpython-313.pyc
+│   │       │   │   │   │       ├── criterion.cpython-313.pyc
+│   │       │   │   │   │       ├── exceptions.cpython-313.pyc
+│   │       │   │   │   │       └── resolution.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── providers.cpython-313.pyc
+│   │       │   │   │       ├── structs.cpython-313.pyc
+│   │       │   │   │       └── reporters.cpython-313.pyc
 │   │       │   │   ├── rich
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── __main__.py
@@ -8333,6 +8571,70 @@
 │   │       │   │   │   ├── traceback.py
 │   │       │   │   │   ├── tree.py
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── _extension.cpython-313.pyc
+│   │       │   │   │       ├── console.cpython-313.pyc
+│   │       │   │   │       ├── _null_file.cpython-313.pyc
+│   │       │   │   │       ├── errors.cpython-313.pyc
+│   │       │   │   │       ├── themes.cpython-313.pyc
+│   │       │   │   │       ├── default_styles.cpython-313.pyc
+│   │       │   │   │       ├── style.cpython-313.pyc
+│   │       │   │   │       ├── color.cpython-313.pyc
+│   │       │   │   │       ├── _palettes.cpython-313.pyc
+│   │       │   │   │       ├── palette.cpython-313.pyc
+│   │       │   │   │       ├── color_triplet.cpython-313.pyc
+│   │       │   │   │       ├── repr.cpython-313.pyc
+│   │       │   │   │       ├── terminal_theme.cpython-313.pyc
+│   │       │   │   │       ├── theme.cpython-313.pyc
+│   │       │   │   │       ├── _emoji_replace.cpython-313.pyc
+│   │       │   │   │       ├── _emoji_codes.cpython-313.pyc
+│   │       │   │   │       ├── _export_format.cpython-313.pyc
+│   │       │   │   │       ├── _fileno.cpython-313.pyc
+│   │       │   │   │       ├── _log_render.cpython-313.pyc
+│   │       │   │   │       ├── text.cpython-313.pyc
+│   │       │   │   │       ├── _loop.cpython-313.pyc
+│   │       │   │   │       ├── _pick.cpython-313.pyc
+│   │       │   │   │       ├── _wrap.cpython-313.pyc
+│   │       │   │   │       ├── cells.cpython-313.pyc
+│   │       │   │   │       ├── _cell_widths.cpython-313.pyc
+│   │       │   │   │       ├── align.cpython-313.pyc
+│   │       │   │   │       ├── constrain.cpython-313.pyc
+│   │       │   │   │       ├── jupyter.cpython-313.pyc
+│   │       │   │   │       ├── segment.cpython-313.pyc
+│   │       │   │   │       ├── measure.cpython-313.pyc
+│   │       │   │   │       ├── protocol.cpython-313.pyc
+│   │       │   │   │       ├── containers.cpython-313.pyc
+│   │       │   │   │       ├── control.cpython-313.pyc
+│   │       │   │   │       ├── emoji.cpython-313.pyc
+│   │       │   │   │       ├── highlighter.cpython-313.pyc
+│   │       │   │   │       ├── markup.cpython-313.pyc
+│   │       │   │   │       ├── pager.cpython-313.pyc
+│   │       │   │   │       ├── pretty.cpython-313.pyc
+│   │       │   │   │       ├── abc.cpython-313.pyc
+│   │       │   │   │       ├── region.cpython-313.pyc
+│   │       │   │   │       ├── scope.cpython-313.pyc
+│   │       │   │   │       ├── panel.cpython-313.pyc
+│   │       │   │   │       ├── box.cpython-313.pyc
+│   │       │   │   │       ├── padding.cpython-313.pyc
+│   │       │   │   │       ├── table.cpython-313.pyc
+│   │       │   │   │       ├── _ratio.cpython-313.pyc
+│   │       │   │   │       ├── screen.cpython-313.pyc
+│   │       │   │   │       ├── styled.cpython-313.pyc
+│   │       │   │   │       ├── logging.cpython-313.pyc
+│   │       │   │   │       ├── traceback.cpython-313.pyc
+│   │       │   │   │       ├── columns.cpython-313.pyc
+│   │       │   │   │       ├── syntax.cpython-313.pyc
+│   │       │   │   │       ├── progress.cpython-313.pyc
+│   │       │   │   │       ├── filesize.cpython-313.pyc
+│   │       │   │   │       ├── live.cpython-313.pyc
+│   │       │   │   │       ├── file_proxy.cpython-313.pyc
+│   │       │   │   │       ├── ansi.cpython-313.pyc
+│   │       │   │   │       ├── live_render.cpython-313.pyc
+│   │       │   │   │       ├── progress_bar.cpython-313.pyc
+│   │       │   │   │       ├── spinner.cpython-313.pyc
+│   │       │   │   │       ├── _spinners.cpython-313.pyc
+│   │       │   │   │       ├── _windows.cpython-313.pyc
+│   │       │   │   │       └── _win32_console.cpython-313.pyc
 │   │       │   │   ├── tomli
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _parser.py
@@ -8354,6 +8656,10 @@
 │   │       │   │   │   ├── _windows.py
 │   │       │   │   │   ├── py.typed
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── _api.cpython-313.pyc
+│   │       │   │   │       ├── _ssl_constants.cpython-313.pyc
+│   │       │   │   │       └── _windows.cpython-313.pyc
 │   │       │   │   ├── urllib3
 │   │       │   │   │   ├── __init__.py
 │   │       │   │   │   ├── _collections.py
@@ -8380,6 +8686,9 @@
 │   │       │   │   │   │   │   ├── low_level.py
 │   │       │   │   │   │   │   └── __pycache__
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── _appengine_environ.cpython-313.pyc
+│   │       │   │   │   │       └── socks.cpython-313.pyc
 │   │       │   │   │   ├── packages
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── six.py
@@ -8389,6 +8698,8 @@
 │   │       │   │   │   │   │   ├── weakref_finalize.py
 │   │       │   │   │   │   │   └── __pycache__
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       └── six.cpython-313.pyc
 │   │       │   │   │   ├── util
 │   │       │   │   │   │   ├── __init__.py
 │   │       │   │   │   │   ├── connection.py
@@ -8404,9 +8715,36 @@
 │   │       │   │   │   │   ├── url.py
 │   │       │   │   │   │   ├── wait.py
 │   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       ├── connection.cpython-313.pyc
+│   │       │   │   │   │       ├── wait.cpython-313.pyc
+│   │       │   │   │   │       ├── request.cpython-313.pyc
+│   │       │   │   │   │       ├── response.cpython-313.pyc
+│   │       │   │   │   │       ├── retry.cpython-313.pyc
+│   │       │   │   │   │       ├── ssl_.cpython-313.pyc
+│   │       │   │   │   │       ├── url.cpython-313.pyc
+│   │       │   │   │   │       ├── ssltransport.cpython-313.pyc
+│   │       │   │   │   │       ├── timeout.cpython-313.pyc
+│   │       │   │   │   │       ├── proxy.cpython-313.pyc
+│   │       │   │   │   │       ├── ssl_match_hostname.cpython-313.pyc
+│   │       │   │   │   │       └── queue.cpython-313.pyc
 │   │       │   │   │   └── __pycache__
+│   │       │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │       ├── exceptions.cpython-313.pyc
+│   │       │   │   │       ├── _version.cpython-313.pyc
+│   │       │   │   │       ├── connectionpool.cpython-313.pyc
+│   │       │   │   │       ├── _collections.cpython-313.pyc
+│   │       │   │   │       ├── connection.cpython-313.pyc
+│   │       │   │   │       ├── request.cpython-313.pyc
+│   │       │   │   │       ├── filepost.cpython-313.pyc
+│   │       │   │   │       ├── fields.cpython-313.pyc
+│   │       │   │   │       ├── response.cpython-313.pyc
+│   │       │   │   │       └── poolmanager.cpython-313.pyc
 │   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       └── typing_extensions.cpython-313.pyc
 │   │       │   └── __pycache__
+│   │       │       └── __init__.cpython-313.pyc
 │   │       ├── pip-25.1.1.dist-info
 │   │       │   ├── licenses
 │   │       │   │   ├── AUTHORS.txt
@@ -9393,12 +9731,237 @@
 │   │       │       ├── document.cpython-313.pyc
 │   │       │       ├── anchors.cpython-313.pyc
 │   │       │       └── stacking.cpython-313.pyc
-│   │       └── weasyprint-65.1.dist-info
-│   │           ├── entry_points.txt
-│   │           ├── licenses
-│   │           │   └── LICENSE
-│   │           ├── WHEEL
+│   │       ├── weasyprint-65.1.dist-info
+│   │       │   ├── entry_points.txt
+│   │       │   ├── licenses
+│   │       │   │   └── LICENSE
+│   │       │   ├── WHEEL
+│   │       │   ├── METADATA
+│   │       │   ├── INSTALLER
+│   │       │   ├── REQUESTED
+│   │       │   └── RECORD
+│   │       ├── dj_database_url
+│   │       │   ├── __init__.py
+│   │       │   ├── py.typed
+│   │       │   └── __pycache__
+│   │       │       └── __init__.cpython-313.pyc
+│   │       ├── dj_database_url-3.0.1.dist-info
+│   │       │   ├── licenses
+│   │       │   │   └── LICENSE
+│   │       │   ├── METADATA
+│   │       │   ├── WHEEL
+│   │       │   ├── top_level.txt
+│   │       │   ├── INSTALLER
+│   │       │   ├── REQUESTED
+│   │       │   └── RECORD
+│   │       ├── packaging
+│   │       │   ├── __init__.py
+│   │       │   ├── _elffile.py
+│   │       │   ├── _manylinux.py
+│   │       │   ├── _musllinux.py
+│   │       │   ├── _parser.py
+│   │       │   ├── _structures.py
+│   │       │   ├── _tokenizer.py
+│   │       │   ├── markers.py
+│   │       │   ├── metadata.py
+│   │       │   ├── py.typed
+│   │       │   ├── requirements.py
+│   │       │   ├── specifiers.py
+│   │       │   ├── tags.py
+│   │       │   ├── utils.py
+│   │       │   ├── version.py
+│   │       │   ├── licenses
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── _spdx.py
+│   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       └── _spdx.cpython-313.pyc
+│   │       │   └── __pycache__
+│   │       │       ├── __init__.cpython-313.pyc
+│   │       │       ├── _elffile.cpython-313.pyc
+│   │       │       ├── _manylinux.cpython-313.pyc
+│   │       │       ├── _musllinux.cpython-313.pyc
+│   │       │       ├── _parser.cpython-313.pyc
+│   │       │       ├── _structures.cpython-313.pyc
+│   │       │       ├── _tokenizer.cpython-313.pyc
+│   │       │       ├── markers.cpython-313.pyc
+│   │       │       ├── metadata.cpython-313.pyc
+│   │       │       ├── requirements.cpython-313.pyc
+│   │       │       ├── specifiers.cpython-313.pyc
+│   │       │       ├── tags.cpython-313.pyc
+│   │       │       ├── utils.cpython-313.pyc
+│   │       │       └── version.cpython-313.pyc
+│   │       ├── packaging-25.0.dist-info
+│   │       │   ├── licenses
+│   │       │   │   ├── LICENSE
+│   │       │   │   ├── LICENSE.APACHE
+│   │       │   │   └── LICENSE.BSD
+│   │       │   ├── WHEEL
+│   │       │   ├── METADATA
+│   │       │   ├── INSTALLER
+│   │       │   └── RECORD
+│   │       ├── gunicorn
+│   │       │   ├── __init__.py
+│   │       │   ├── __main__.py
+│   │       │   ├── arbiter.py
+│   │       │   ├── config.py
+│   │       │   ├── debug.py
+│   │       │   ├── errors.py
+│   │       │   ├── glogging.py
+│   │       │   ├── pidfile.py
+│   │       │   ├── reloader.py
+│   │       │   ├── sock.py
+│   │       │   ├── systemd.py
+│   │       │   ├── util.py
+│   │       │   ├── app
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── base.py
+│   │       │   │   ├── pasterapp.py
+│   │       │   │   ├── wsgiapp.py
+│   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       ├── base.cpython-313.pyc
+│   │       │   │       ├── pasterapp.cpython-313.pyc
+│   │       │   │       └── wsgiapp.cpython-313.pyc
+│   │       │   ├── http
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── body.py
+│   │       │   │   ├── errors.py
+│   │       │   │   ├── message.py
+│   │       │   │   ├── parser.py
+│   │       │   │   ├── unreader.py
+│   │       │   │   ├── wsgi.py
+│   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       ├── body.cpython-313.pyc
+│   │       │   │       ├── errors.cpython-313.pyc
+│   │       │   │       ├── message.cpython-313.pyc
+│   │       │   │       ├── parser.cpython-313.pyc
+│   │       │   │       ├── unreader.cpython-313.pyc
+│   │       │   │       └── wsgi.cpython-313.pyc
+│   │       │   ├── instrument
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── statsd.py
+│   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       └── statsd.cpython-313.pyc
+│   │       │   ├── workers
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── base.py
+│   │       │   │   ├── base_async.py
+│   │       │   │   ├── geventlet.py
+│   │       │   │   ├── ggevent.py
+│   │       │   │   ├── gthread.py
+│   │       │   │   ├── gtornado.py
+│   │       │   │   ├── sync.py
+│   │       │   │   ├── workertmp.py
+│   │       │   │   └── __pycache__
+│   │       │   │       ├── __init__.cpython-313.pyc
+│   │       │   │       ├── base.cpython-313.pyc
+│   │       │   │       ├── base_async.cpython-313.pyc
+│   │       │   │       ├── geventlet.cpython-313.pyc
+│   │       │   │       ├── ggevent.cpython-313.pyc
+│   │       │   │       ├── gthread.cpython-313.pyc
+│   │       │   │       ├── gtornado.cpython-313.pyc
+│   │       │   │       ├── sync.cpython-313.pyc
+│   │       │   │       └── workertmp.cpython-313.pyc
+│   │       │   └── __pycache__
+│   │       │       ├── __init__.cpython-313.pyc
+│   │       │       ├── __main__.cpython-313.pyc
+│   │       │       ├── arbiter.cpython-313.pyc
+│   │       │       ├── config.cpython-313.pyc
+│   │       │       ├── debug.cpython-313.pyc
+│   │       │       ├── errors.cpython-313.pyc
+│   │       │       ├── glogging.cpython-313.pyc
+│   │       │       ├── pidfile.cpython-313.pyc
+│   │       │       ├── reloader.cpython-313.pyc
+│   │       │       ├── sock.cpython-313.pyc
+│   │       │       ├── systemd.cpython-313.pyc
+│   │       │       └── util.cpython-313.pyc
+│   │       ├── gunicorn-23.0.0.dist-info
+│   │       │   ├── LICENSE
+│   │       │   ├── METADATA
+│   │       │   ├── WHEEL
+│   │       │   ├── entry_points.txt
+│   │       │   ├── top_level.txt
+│   │       │   ├── INSTALLER
+│   │       │   ├── REQUESTED
+│   │       │   └── RECORD
+│   │       ├── psycopg2
+│   │       │   ├── errorcodes.py
+│   │       │   ├── errors.py
+│   │       │   ├── extensions.py
+│   │       │   ├── extras.py
+│   │       │   ├── pool.py
+│   │       │   ├── sql.py
+│   │       │   ├── tz.py
+│   │       │   ├── _ipaddress.py
+│   │       │   ├── _json.py
+│   │       │   ├── _psycopg.cp313-win_amd64.pyd
+│   │       │   ├── _range.py
+│   │       │   ├── __init__.py
+│   │       │   └── __pycache__
+│   │       │       ├── __init__.cpython-313.pyc
+│   │       │       ├── _ipaddress.cpython-313.pyc
+│   │       │       ├── _json.cpython-313.pyc
+│   │       │       ├── _range.cpython-313.pyc
+│   │       │       ├── errorcodes.cpython-313.pyc
+│   │       │       ├── errors.cpython-313.pyc
+│   │       │       ├── extensions.cpython-313.pyc
+│   │       │       ├── extras.cpython-313.pyc
+│   │       │       ├── pool.cpython-313.pyc
+│   │       │       ├── sql.cpython-313.pyc
+│   │       │       └── tz.cpython-313.pyc
+│   │       ├── psycopg2_binary-2.9.10.dist-info
+│   │       │   ├── DELVEWHEEL
+│   │       │   ├── LICENSE
+│   │       │   ├── METADATA
+│   │       │   ├── top_level.txt
+│   │       │   ├── WHEEL
+│   │       │   ├── INSTALLER
+│   │       │   ├── REQUESTED
+│   │       │   └── RECORD
+│   │       ├── psycopg2_binary.libs
+│   │       │   ├── libcrypto-3-x64-e57e1a41cc5d7f9b741c935f04fe4f2f.dll
+│   │       │   ├── libpq-29b01d8382d5824098bc0b4861813b70.dll
+│   │       │   └── libssl-3-x64-6b7807fd98efdd91c677351cd0a9f2d8.dll
+│   │       ├── whitenoise
+│   │       │   ├── __init__.py
+│   │       │   ├── base.py
+│   │       │   ├── compress.py
+│   │       │   ├── media_types.py
+│   │       │   ├── middleware.py
+│   │       │   ├── responders.py
+│   │       │   ├── storage.py
+│   │       │   ├── string_utils.py
+│   │       │   ├── runserver_nostatic
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── management
+│   │       │   │   │   ├── __init__.py
+│   │       │   │   │   ├── commands
+│   │       │   │   │   │   ├── __init__.py
+│   │       │   │   │   │   ├── runserver.py
+│   │       │   │   │   │   └── __pycache__
+│   │       │   │   │   │       ├── __init__.cpython-313.pyc
+│   │       │   │   │   │       └── runserver.cpython-313.pyc
+│   │       │   │   │   └── __pycache__
+│   │       │   │   │       └── __init__.cpython-313.pyc
+│   │       │   │   └── __pycache__
+│   │       │   │       └── __init__.cpython-313.pyc
+│   │       │   └── __pycache__
+│   │       │       ├── __init__.cpython-313.pyc
+│   │       │       ├── base.cpython-313.pyc
+│   │       │       ├── compress.cpython-313.pyc
+│   │       │       ├── media_types.cpython-313.pyc
+│   │       │       ├── middleware.cpython-313.pyc
+│   │       │       ├── responders.cpython-313.pyc
+│   │       │       ├── storage.cpython-313.pyc
+│   │       │       └── string_utils.cpython-313.pyc
+│   │       └── whitenoise-6.9.0.dist-info
+│   │           ├── LICENSE
 │   │           ├── METADATA
+│   │           ├── WHEEL
+│   │           ├── top_level.txt
 │   │           ├── INSTALLER
 │   │           ├── REQUESTED
 │   │           └── RECORD
@@ -9420,7 +9983,8 @@
 │   │   ├── pyftmerge.exe
 │   │   ├── pyftsubset.exe
 │   │   ├── ttx.exe
-│   │   └── weasyprint.exe
+│   │   ├── weasyprint.exe
+│   │   └── gunicorn.exe
 │   ├── .gitignore
 │   ├── pyvenv.cfg
 │   └── share
@@ -9430,7 +9994,11 @@
 ├── db.sqlite3
 ├── estrutura.txt
 ├── gerar_conteudo.ps1
+├── requirements.txt
 ├── conteudocompleto.ps1
+├── build.sh
+├── render.yaml
+├── .gitignore
 ├── templates
 │   ├── core
 │   │   ├── login.html
@@ -9474,7 +10042,12 @@
 │   │   ├── admin_form_profile.html
 │   │   ├── impressao_ponto_individual.html
 │   │   ├── impressao_ponto_unidade.html
-│   │   └── admin_deletar_folha_permanente_confirm.html
+│   │   ├── admin_deletar_folha_permanente_confirm.html
+│   │   ├── admin_listar_delegados.html
+│   │   ├── admin_form_delegado.html
+│   │   ├── admin_inativar_delegado_confirm.html
+│   │   ├── agente_listar_conferentes.html
+│   │   └── agente_atribuir_conferente.html
 │   ├── base.html
 │   └── base_adminlte.html
 └── static
@@ -10084,7 +10657,8 @@
     │   │       └── select.bootstrap4.min.js
     │   ├── datatables
     │   │   ├── jquery.dataTables.js
-    │   │   └── jquery.dataTables.min.js
+    │   │   ├── jquery.dataTables.min.js
+    │   │   └── pt-BR.json
     │   ├── daterangepicker
     │   │   ├── daterangepicker.css
     │   │   └── daterangepicker.js

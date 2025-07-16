@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.1.2/css/rowGroup.bootstrap4.min.css">
     
     <style>
+        /* Estilo para o agrupamento de linhas do DataTables */
         #tabela-servidores tbody tr.dtrg-group td {
             font-size: 0.8rem !important;
             font-weight: 600 !important; /* Um pouco menos forte que 'bold' */
@@ -19,6 +20,21 @@
             background-color: #e9ecef !important;
             padding: 0.5rem 0.75rem !important; /* Padding ajustado */
             letter-spacing: 0.5px;
+        }
+
+        /* Estilo para diminuir os small-boxes e seus ícones/texto */
+        .small-box.compact .inner h3 {
+            font-size: 1.8rem; /* Título menor */
+        }
+        .small-box.compact .inner p {
+            font-size: 0.9rem; /* Parágrafo menor */
+        }
+        .small-box.compact .icon i {
+            font-size: 3rem; /* Ícone menor */
+            top: 10px; /* Ajusta posição do ícone */
+        }
+        .small-box.compact .small-box-footer {
+            font-size: 0.85rem; /* Footer menor */
         }
     </style>
 {% endblock %}
@@ -41,44 +57,63 @@
 
 <section class="content">
     <div class="container-fluid">
+        {# PRIMEIRA LINHA: Folhas em Andamento e Folhas Concluídas lado a lado #}
         <div class="row">
-
-            <div class="col-lg-5">
+            {# Folhas em Andamento - Card Principal #}
+            <div class="col-lg-6"> {# Ajustado para ocupar metade da largura #}
                 <div class="card card-warning card-outline" style="height: calc(100% - 1rem);">
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-hourglass-half mr-2"></i>Folhas em Andamento</h3></div>
-                    <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+                    <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
                         <table class="table table-hover">
                             <tbody>
                                 {% for folha in pendencias %}
                                 <tr>
-                                    <td><strong>{{ folha.servidor.nome }}</strong><br><small class="text-muted">{{ folha.get_trimestre_display }} de {{ folha.ano }}</small></td>
-                                    <td class="text-right align-middle"><a href="{% url 'core:gerenciar_ponto' folha.id %}" class="btn btn-sm btn-primary">Gerenciar</a></td>
+                                    <td>
+                                        <strong>{{ folha.servidor.nome }}</strong><br>
+                                        <small class="text-muted">{{ folha.servidor.lotacao.nome_unidade|default:"N/A" }} - {{ folha.get_trimestre_display }} de {{ folha.ano }}</small>
+                                    </td>
+                                    <td class="text-right align-middle">
+                                        {# Se for a própria folha do agente, o link "Gerenciar" aponta para a view 'gerenciar_ponto' #}
+                                        {% if folha.servidor.pk == request.user.pk %}
+                                            <a href="{% url 'core:gerenciar_ponto' folha_id=folha.id %}" class="btn btn-sm btn-info">Minha Folha (Gerenciar)</a>
+                                        {% else %}
+                                            <a href="{% url 'core:gerenciar_ponto' folha.id %}" class="btn btn-sm btn-primary">Gerenciar</a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr><td class="text-center p-3 text-success"><i class="fas fa-check-circle"></i> Nenhuma folha pendente.</td></tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-5">
+            {# Folhas Concluídas - Card #}
+            <div class="col-lg-6"> {# Ajustado para ocupar a outra metade da largura #}
                 <div class="card card-success card-outline" style="height: calc(100% - 1rem);">
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-check-double mr-2"></i>Folhas Concluídas</h3></div>
-                    <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+                    <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
                         <table class="table table-hover">
                             <tbody>
                                 {% for folha in folhas_concluidas %}
                                 <tr>
-                                    <td><strong>{{ folha.servidor.nome }}</strong><br><small class="text-muted">{{ folha.get_trimestre_display }} de {{ folha.ano }}</small></td>
+                                    <td>
+                                        <strong>{{ folha.servidor.nome }}</strong><br>
+                                        <small class="text-muted">{{ folha.servidor.lotacao.nome_unidade|default:"N/A" }} - {{ folha.get_trimestre_display }} de {{ folha.ano }}</small>
+                                    </td>
                                     <td class="text-right align-middle">
-                                        <form action="{% url 'core:arquivar_folha' folha.id %}" method="post" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-dark">Arquivar</button></form>
+                                        {% if folha.servidor.pk == request.user.pk %}
+                                            <a href="{% url 'core:gerenciar_ponto' folha_id=folha.id %}" class="btn btn-sm btn-info">Ver Detalhes</a>
+                                        {% else %}
+                                            <form action="{% url 'core:arquivar_folha' folha.id %}" method="post" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-dark">Arquivar</button></form>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr><td class="text-center p-3 text-info"><i class="fas fa-info-circle"></i> Nenhuma folha concluída.</td></tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -92,21 +127,9 @@
                     {% endif %}
                 </div>
             </div>
-            
-            <div class="col-lg-2">
-                <div class="card card-secondary card-outline" style="height: calc(100% - 1rem);">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-chart-pie mr-2"></i>Status</h3>
-                    </div>
-                    <div class="card-body d-flex align-items-center justify-content-center">
-                        <div class="chart-container" style="position: relative; height:100%; width:100%">
-                             <canvas id="pieChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
+        {# VISÃO GERAL DOS SERVIDORES #}
         <div class="row">
             <div class="col-12">
                 <div class="card card-info card-outline">
@@ -117,10 +140,10 @@
                         <table id="tabela-servidores" class="table table-bordered table-striped" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>ID Funcional</th>
-                                    <th>Perfil</th> {# NOVO: Coluna Perfil #}
-                                    <th>Lotação</th>
+                                    <th style="width: 25%;">Nome</th>
+                                    <th style="width: 15%;">ID Funcional</th>
+                                    <th style="width: 20%;">Perfil</th>
+                                    <th style="width: 20%;">Lotação</th>
                                     <th style="width: 200px">Ações</th>
                                 </tr>
                             </thead>
@@ -129,14 +152,61 @@
                                 <tr>
                                     <td>{{ servidor.nome }}</td>
                                     <td>{{ servidor.id_funcional }}</td>
-                                    <td>{{ servidor.perfil }}</td> {# NOVO: Exibição do Perfil #}
+                                    <td>
+                                        <span class="badge 
+                                            {% if servidor.perfil == 'Administrador Geral' %}badge-dark
+                                            {% elif servidor.perfil == 'Agente de Pessoal' %}badge-primary
+                                            {% elif servidor.perfil == 'Delegado de Polícia' %}badge-danger
+                                            {% elif servidor.is_conferente %}badge-success
+                                            {% elif servidor.perfil == 'Inspetor de Polícia' %}badge-info {# NOVO: Cor para Inspetor #}
+                                            {% elif servidor.perfil == 'Investigador Policial' %}badge-warning {# NOVO: Cor para Investigador #}
+                                            {% else %}badge-secondary{% endif %}"> {# Perfil padrão para os demais cargos #}
+                                            {{ servidor.perfil }}
+                                            {% if servidor.is_conferente %}{% if not servidor.is_delegado %} (Conf.){% endif %}{% endif %}
+                                        </span>
+                                    </td>
                                     <td>{{ servidor.lotacao.nome_unidade }}</td>
                                     <td class="text-center">
-                                        <a href="{% url 'core:agente_criar_folha' %}?usuario_id={{ servidor.id }}" class="btn btn-sm btn-success" title="Criar Folha Manual"><i class="fas fa-file-alt"></i></a>
-                                        <a href="{% url 'core:agente_historico_folhas' servidor.id %}" class="btn btn-sm btn-secondary" title="Histórico"><i class="fas fa-history"></i></a>
-                                        <a href="{% url 'core:editar_usuario' servidor.id %}" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
-                                        <a href="{% url 'core:transferir_usuario' servidor.id %}" class="btn btn-sm btn-warning" title="Transferir"><i class="fas fa-random"></i></a>
-                                        <a href="{% url 'core:inativar_usuario' servidor.id %}" class="btn btn-sm btn-danger" title="Inativar"><i class="fas fa-user-slash"></i></a>
+                                        {# Lógica condicional para botões de ação baseada no perfil #}
+                                        {% if servidor.is_administrador_geral %}
+                                            <button class="btn btn-sm btn-light" title="Gerenciado via Django Admin" disabled><i class="fas fa-user-cog"></i></button>
+                                        {% elif servidor.is_agente_pessoal %}
+                                            <a href="{% url 'core:editar_agente' servidor.id %}" class="btn btn-sm btn-info" title="Editar Agente"><i class="fas fa-edit"></i></a>
+                                            <form action="{% url 'core:inativar_agente' servidor.id %}" method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm {% if servidor.ativo %}btn-warning{% else %}btn-success{% endif %}" 
+                                                    title="{% if servidor.ativo %}Inativar Agente{% else %}Ativar Agente{% endif %}">
+                                                    {% if servidor.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
+                                                </button>
+                                            </form>
+                                        {% elif servidor.is_delegado %}
+                                            <a href="{% url 'core:editar_delegado' servidor.id %}" class="btn btn-sm btn-primary" title="Editar Delegado"><i class="fas fa-edit"></i></a>
+                                            <form action="{% url 'core:inativar_delegado' servidor.id %}" method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm {% if servidor.ativo %}btn-warning{% else %}btn-success{% endif %}" 
+                                                    title="{% if servidor.ativo %}Inativar Delegado{% else %}Ativar Delegado{% endif %}">
+                                                    {% if servidor.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
+                                                </button>
+                                            </form>
+                                        {% else %} {# Servidor Comum (qualquer cargo policial) e Servidor-Conferente #}
+                                            {# Somente exibe o link "Gerenciar Folha" se o servidor tiver uma folha atual #}
+                                            {% if servidor.id_current_folha %}
+                                                <a href="{% url 'core:gerenciar_ponto' folha_id=servidor.id_current_folha %}" class="btn btn-sm btn-info" title="Gerenciar Folha"><i class="fas fa-file-alt"></i></a>
+                                            {% else %}
+                                                {# Se não houver folha atual, oferece para criar uma #}
+                                                <a href="{% url 'core:agente_criar_folha' %}?usuario_id={{ servidor.id }}" class="btn btn-sm btn-success" title="Criar Folha Manual"><i class="fas fa-plus"></i></a>
+                                            {% endif %}
+                                            <a href="{% url 'core:agente_historico_folhas' servidor.id %}" class="btn btn-sm btn-secondary" title="Histórico"><i class="fas fa-history"></i></a>
+                                            <a href="{% url 'core:editar_usuario' servidor.id %}" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
+                                            <a href="{% url 'core:transferir_usuario' servidor.id %}" class="btn btn-sm btn-warning" title="Transferir"><i class="fas fa-random"></i></a>
+                                            <a href="{% url 'core:inativar_usuario' servidor.id %}" class="btn btn-sm btn-danger" title="Inativar"><i class="fas fa-user-slash"></i></a>
+                                        {% endif %}
+                                        
+                                        {# Botão de deletar permanentemente - Disponível para Admin Geral para todos, mas não para ele mesmo #}
+                                        {% if request.user.is_administrador_geral and request.user != servidor %}
+                                        <a href="{% url 'core:deletar_usuario_permanente' servidor.id %}" class="btn btn-sm btn-danger" title="Excluir Usuário Permanentemente"
+                                           onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente o usuário e todos os dados relacionados (folhas, assinaturas, conferências)! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -167,44 +237,22 @@ $(function () {
         "paging": true,
         "pageLength": 10,
         "lengthChange": true,
-        "ordering": false,
+        "searching": true,
+        "ordering": true, /* Habilita a ordenação nativa do DataTables */
         "info": true,
-        "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Portuguese-Brasil.json" },
+        "language": { "url": "{% static 'plugins/datatables/Portuguese-Brasil.json' %}" },
         "dom":  "<'row'<'col-sm-12 col-md-3'l><'col-sm-12 col-md-9'f>>" +
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        "order": [[3, 'asc'], [0, 'asc']], // ORDENAÇÃO: Primeiro pela 4ª coluna (Lotação, agora na posição 3), depois pela 1ª (Nome)
         "rowGroup": {
-            dataSrc: 3 // ORDENAÇÃO: Alterado de 2 para 3 para agrupar pela nova coluna de Lotação (agora índice 3)
+            dataSrc: 3 // AGRUPAMENTO: Agrupa pela 4ª coluna (Lotação, agora na posição 3)
         },
         "columnDefs": [
-            { "targets": [3], "visible": false }, // ORDENAÇÃO: Alterado de 2 para 3 para ocultar a nova coluna de Lotação (agora índice 3)
-            { "orderable": false, "targets": [0, 1, 2, 4] } // ORDENAÇÃO: Atualizado os índices para 'Ações' (agora 4) e adicionado 2 (Perfil)
+            { "targets": [3], "visible": false }, /* Esconde a coluna de Lotação, usada para agrupamento */
+            { "orderable": false, "targets": [4] } /* Desabilita a ordenação para a coluna de Ações */
         ]
     });
-
-    var chartConfig = JSON.parse('{{ chart_data_json|escapejs }}');
-    if (chartConfig.data && chartConfig.data.length > 0 && chartConfig.data.some(val => val > 0)) {
-        var pieChartCanvas = $('#pieChart').get(0).getContext('2d');
-        var pieData = { labels: chartConfig.labels, datasets: [{ data: chartConfig.data, backgroundColor : chartConfig.backgroundColor }] };
-        new Chart(pieChartCanvas, {
-            type: 'pie',
-            data: pieData,
-            options: {
-                maintainAspectRatio: false,
-                responsive: true,
-                legend: { 
-                    display: true,
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 12,
-                        fontSize: 10
-                    }
-                }
-            }
-        });
-    } else {
-        $('#pieChart').parent().html('<p class="text-center my-5 small">Sem dados para o gráfico.</p>');
-    }
 
     $('#form-arquivar-lote').on('submit', function(e){
         if(!confirm('Tem certeza que deseja arquivar TODAS as folhas concluídas?')){

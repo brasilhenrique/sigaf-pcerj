@@ -1,0 +1,30 @@
+{# F:\dev\sigaf-novo\templates\core\admin_inativar_delegado_confirm.html (NOVO) #}
+{% extends 'base_adminlte.html' %}
+
+{% block title %}Inativar Delegado{% endblock %}
+
+{% block page_title %}Confirmar Inativação de Delegado{% endblock %}
+{% block page_title_header %}Confirmar Inativação de Delegado{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-warning">
+            <div class="card-header">
+                <h3 class="card-title">Inativar Delegado de Polícia</h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="card-body">
+                    <p>Você tem certeza que deseja inativar o Delegado <strong>{{ delegado.nome }}</strong>?</p>
+                    <p class="text-muted">O usuário não poderá mais acessar o sistema, mas seus registros e responsabilidades de conferência serão mantidos para consulta.</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'core:listar_delegados' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-warning float-right">Confirmar Inativação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

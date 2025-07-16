@@ -1,4 +1,4 @@
-# core/signals.py (CORRIGIDO)
+# core/signals.py (MODIFICADO - Criação de folhas para Agentes e Delegados)
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -12,12 +12,12 @@ def criar_folha_ponto_para_novo_usuario(sender, instance, created, **kwargs):
     Cria uma FolhaPonto para o trimestre atual sempre que um novo usuário
     (que não seja Admin Geral) é criado e está ativo.
     """
-    if created and instance.perfil != 'Administrador Geral' and instance.ativo:
+    # MODIFICADO: A folha será criada para QUALQUER usuário ATIVO, EXCETO Administrador Geral.
+    # Isso inclui Agentes de Pessoal e Delegados, se eles gerarem folhas para si mesmos.
+    if created and instance.ativo and instance.perfil != 'Administrador Geral':
         hoje = date.today()
         trimestre_atual = (hoje.month - 1) // 3 + 1
         
-        # get_or_create para segurança, caso a folha já exista (evita duplicatas)
-        # e para garantir que a unidade de geração seja a lotação atual do servidor
         folha, folha_criada = FolhaPonto.objects.get_or_create(
             servidor=instance, 
             ano=hoje.year, 

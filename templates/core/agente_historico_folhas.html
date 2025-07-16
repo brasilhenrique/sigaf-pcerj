@@ -1,3 +1,4 @@
+{# ARQUIVO: templates/core/agente_historico_folhas.html #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
@@ -7,9 +8,20 @@
 {% block content %}
 
 <div class="mb-3">
-    <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left mr-2"></i>Voltar para Gestão de Usuários
-    </a>
+    {# Lógica para o botão de voltar, baseado no perfil do usuário logado #}
+    {% if request.user.perfil == 'Agente de Pessoal' %}
+        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard do Agente
+        </a>
+    {% elif request.user.perfil == 'Administrador Geral' %}
+         <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar para Gestão de Usuários
+        </a>
+    {% else %} {# Caso seja outro perfil, como Delegado, pode voltar para o dashboard padrão #}
+        <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar ao Dashboard
+        </a>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -28,7 +40,7 @@
                     <th>Período</th>
                     <th>Status</th>
                     <th>Unidade na Geração</th>
-                    <th style="width: 180px;">Ações</th> {# Aumentado a largura para mais botões #}
+                    <th style="width: 220px;">Ações</th> {# Aumentado a largura para mais botões #}
                 </tr>
             </thead>
             <tbody>
@@ -47,9 +59,23 @@
                     <td class="text-center"> {# Centralizado para os botões #}
                         <a href="{% url 'core:gerenciar_ponto' folha.id %}" class="btn btn-primary btn-sm" title="Gerenciar Folha"><i class="fas fa-edit"></i></a>
                         <a href="{% url 'core:gerar_pdf_individual' folha.id %}" class="btn btn-secondary btn-sm" title="Gerar PDF"><i class="fas fa-file-pdf"></i></a>
-                        {# NOVO BOTÃO: Deletar Permanentemente Folha de Ponto #}
-                        <a href="{% url 'core:deletar_folha_permanente' folha.id %}" class="btn btn-danger btn-sm" title="Excluir Folha Permanentemente"
-                           onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente a folha de ponto e todos os seus dias! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
+                        
+                        {% if folha.status == 'Concluída' %}
+                        <form action="{% url 'core:arquivar_folha' folha.id %}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja arquivar esta folha?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="btn btn-sm btn-dark" title="Arquivar Folha"><i class="fas fa-archive"></i></button>
+                        </form>
+                        {% endif %}
+
+                        {% if request.user.perfil == 'Administrador Geral' or request.user.perfil == 'Agente de Pessoal' %}
+                        <a href="{% url 'core:agente_deletar_folha' folha.id %}" 
+                           class="btn btn-sm btn-danger" 
+                           title="Excluir Folha Permanentemente"
+                           onclick="return confirm('Tem certeza que deseja prosseguir para a exclusão desta folha de ponto?');">
+                           <i class="fas fa-trash-alt"></i>
+                        </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

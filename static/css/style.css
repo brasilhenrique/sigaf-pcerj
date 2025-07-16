@@ -44,3 +44,38 @@ body, html {
   font-size: 35px; /* Ícone aumentado */
   display: block;
 }
+
+/* Ajuste para alinhamento de checkboxes em formulários */
+.form-check-input {
+    vertical-align: middle; /* Alinha verticalmente ao meio */
+    margin-top: -0.125rem; /* Ajuste fino para mover ligeiramente para cima */
+    /* Você pode precisar experimentar com este valor */
+}
+
+.form-check-label {
+    vertical-align: middle; /* Garante que o texto também esteja alinhado */
+}
+
+/* Reafirmar estilos para o small-checkbox-container se eles estiverem afetando o alinhamento */
+.small-checkbox-container .form-check-label-small {
+    vertical-align: middle !important;
+    line-height: 1.2 !important; /* Ajuda a controlar a altura da linha */
+    padding-left: 0.25em !important; /* Ajusta o espaçamento esquerdo */
+}
+
+.small-checkbox-container .form-check-input {
+    margin-top: 0 !important; /* Remove qualquer margin-top extra específico para estes */
+    position: relative; /* Permite ajuste fino com top */
+    top: -1px; /* Empurra o checkbox 1px para cima para melhor alinhamento visual */
+}
+
+/* Seletor mais específico para garantir que o input dentro do form-check seja afetado */
+.form-check .form-check-input {
+    margin-left: 0; /* Garante que não haja margem esquerda indesejada */
+}
+
+/* Ajustes para o texto do label do checkbox se ele tiver quebra de linha */
+.form-check-label {
+    display: inline-block; /* Permite quebras de linha mas mantém o alinhamento */
+    max-width: calc(100% - 1.5em); /* Ajuste a largura máxima para que o texto não sobreponha */
+}

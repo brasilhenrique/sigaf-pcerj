@@ -84,6 +84,10 @@ def change_password_view(request):
         form = ChangePasswordForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
+            # **MOVIDO/GARANTIDO:** Garante que o log seja registrado com o usuário correto
+            # ANTES de qualquer possível recriação de sessão que possa afetar 'request.user'.
+            registrar_log(request, 'PASSWORD_CHANGE_SUCCESS', {'user_id': user.id_funcional}, ip_address=get_client_ip(request)) #
+
             update_session_auth_hash(request, user)  # Mantém o usuário logado
             
             # Se a senha foi alterada via o fluxo de "primeiro login", reseta a flag.
@@ -91,7 +95,6 @@ def change_password_view(request):
                 user.primeiro_login = False
                 user.save(update_fields=['primeiro_login'])
 
-            registrar_log(request, 'PASSWORD_CHANGE_SUCCESS', {'user_id': user.id_funcional}, ip_address=get_client_ip(request))
             messages.success(request, 'Sua senha foi alterada com sucesso!')
             # Redireciona para o dashboard correto após a troca de senha
             if user.perfil == 'Administrador Geral':

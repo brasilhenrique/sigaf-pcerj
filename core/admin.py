@@ -1,4 +1,4 @@
-# core/admin.py (CORRIGIDO)
+# core/admin.py (COMPLETO E FINALIZADO - Adicionando 'ativo' ao list_display de UnidadeAdmin)
 
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
@@ -8,7 +8,7 @@ from .models import Unidade, Usuario, CodigoOcorrencia, FolhaPonto, DiaPonto, Tr
 class CustomUserCreationForm(forms.ModelForm):
     class Meta:
         model = Usuario
-        fields = ('id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_gerenciadas')
+        fields = ('id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_atuacao') # Correção aqui
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -22,7 +22,7 @@ class CustomUserCreationForm(forms.ModelForm):
 class UsuarioAdmin(UserAdmin):
     add_form = CustomUserCreationForm
 
-    list_display = ('id_funcional', 'nome', 'perfil', 'lotacao', 'unidades_gerenciadas_display', 'ativo', 'is_staff')
+    list_display = ('id_funcional', 'nome', 'perfil', 'lotacao', 'unidades_atuacao_display', 'ativo', 'is_staff') # Correção aqui
     list_filter = ('perfil', 'lotacao', 'ativo')
     search_fields = ('nome', 'id_funcional')
     ordering = ('nome',)
@@ -31,7 +31,7 @@ class UsuarioAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('id_funcional', 'password')}),
         ('Informações Pessoais', {'fields': ('nome', 'email')}),
-        ('Status e Lotação', {'fields': ('perfil', 'lotacao', 'unidades_gerenciadas', 'ativo', 'status_servidor', 'primeiro_login', 'data_inativacao')}),
+        ('Status e Lotação', {'fields': ('perfil', 'lotacao', 'unidades_atuacao', 'ativo', 'status_servidor', 'primeiro_login', 'data_inativacao')}), # Correção aqui
         ('Permissões Django', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions'), 'classes': ('collapse',)}),
         ('Datas Importantes', {'fields': ('date_joined', 'last_login'), 'classes': ('collapse',)}),
     )
@@ -39,15 +39,15 @@ class UsuarioAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_gerenciadas'),
+            'fields': ('id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_atuacao'), # Correção aqui
         }),
     )
 
-    filter_horizontal = ('unidades_gerenciadas',) # Permite gerenciar M2M para unidades gerenciadas no admin
+    filter_horizontal = ('unidades_atuacao',) # Permite gerenciar M2M para unidades de atuação no admin
 
-    def unidades_gerenciadas_display(self, obj):
-        return ", ".join([unidade.nome_unidade for unidade in obj.unidades_gerenciadas.all()])
-    unidades_gerenciadas_display.short_description = 'Unidades Gerenciadas'
+    def unidades_atuacao_display(self, obj):
+        return ", ".join([unidade.nome_unidade for unidade in obj.unidades_atuacao.all()]) # Correção aqui
+    unidades_atuacao_display.short_description = 'Unidades de Atuação' 
     
     @admin.action(description="Redefinir senha para ID Funcional")
     def reset_password_to_id(self, request, queryset):
@@ -57,7 +57,14 @@ class UsuarioAdmin(UserAdmin):
             user.save()
         self.message_user(request, "A senha dos usuários selecionados foi redefinida com sucesso. Eles serão forçados a alterar a senha no próximo login.", messages.SUCCESS)
 
-admin.site.register(Unidade)
+# Classe Admin para o modelo Unidade para exibir o campo 'ativo'
+class UnidadeAdmin(admin.ModelAdmin):
+    list_display = ('nome_unidade', 'codigo_ua', 'ativo') # Adiciona 'ativo' à listagem
+    list_filter = ('ativo',) # Permite filtrar por ativo/inativo
+    search_fields = ('nome_unidade', 'codigo_ua') # Permite buscar por nome ou código
+
+# Registros dos modelos no Django Admin
+admin.site.register(Unidade, UnidadeAdmin) 
 admin.site.register(Usuario, UsuarioAdmin)
 admin.site.register(CodigoOcorrencia)
 admin.site.register(FolhaPonto)

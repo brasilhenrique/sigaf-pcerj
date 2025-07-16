@@ -1,12 +1,12 @@
-# ARQUIVO: core/views/agente/dashboard_views.py
-# SIGAF Detection
+# ARQUIVO: core/views/agente/dashboard_views.py (COMPLETO E MODIFICADO - USANDO unidades_atuacao)
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from core.models import Usuario, FolhaPonto
+from core.models import Usuario, FolhaPonto, Unidade # Importado Unidade para usar em .filter()
 import json
+from datetime import date 
 
 def agente_required(view_func):
     @login_required
@@ -20,26 +20,59 @@ def agente_required(view_func):
 @agente_required
 def agente_dashboard_view(request):
     agente = request.user
-    unidades_gerenciadas = agente.unidades_gerenciadas.all()
     
-    servidores_gerenciados = Usuario.objects.filter(
-        lotacao__in=unidades_gerenciadas, 
+    # Alterado de unidades_gerenciadas_ids para unidades_atuacao_ids
+    unidades_atuacao_ids = list(agente.unidades_atuacao.all().values_list('id', flat=True))
+
+    base_servidores_queryset = Usuario.objects.filter(
+        lotacao__id__in=unidades_atuacao_ids, # Alterado aqui
         ativo=True,
-        perfil__in=['Servidor', 'Delegado', 'Agente de Pessoal']
+    ).exclude(
+        perfil='Administrador Geral'
     ).select_related('lotacao').order_by('lotacao__nome_unidade', 'nome')
 
+    servidores_for_template = []
+    hoje = date.today()
+    trimestre_atual = (hoje.month - 1) // 3 + 1
+
+    for servidor in base_servidores_queryset:
+        servidor_dict = {
+            'id': servidor.id,
+            'nome': servidor.nome,
+            'id_funcional': servidor.id_funcional,
+            'perfil': servidor.perfil,
+            'lotacao': servidor.lotacao,
+            'ativo': servidor.ativo,
+            # 'id_current_folha' será adicionado apenas se encontrado para o próprio agente
+        }
+        
+        # Popula 'id_current_folha' apenas se for o próprio agente e a folha existir
+        if servidor.pk == agente.pk: 
+            folha_atual_desse_servidor = FolhaPonto.objects.filter(
+                servidor=servidor,
+                ano=hoje.year,
+                trimestre=trimestre_atual
+            ).first()
+            if folha_atual_desse_servidor:
+                servidor_dict['id_current_folha'] = folha_atual_desse_servidor.id
+            # Se não for encontrada, a chave não será adicionada, o que é tratado no template.
+
+        servidores_for_template.append(servidor_dict)
+
     pendencias = FolhaPonto.objects.filter(
-        servidor__in=servidores_gerenciados,
+        servidor__in=base_servidores_queryset,
         status='Em Andamento'
-    ).distinct().select_related('servidor').order_by('servidor__nome', '-ano', '-trimestre')
+    ).distinct().select_related('servidor', 'servidor__lotacao').order_by('servidor__nome', '-ano', '-trimestre')
 
     folhas_concluidas = FolhaPonto.objects.filter(
-        servidor__in=servidores_gerenciados,
+        servidor__in=base_servidores_queryset,
         status='Concluída'
-    ).select_related('servidor').order_by('servidor__nome', '-ano', '-trimestre')
+    ).distinct().select_related('servidor', 'servidor__lotacao').order_by('servidor__nome', '-ano', '-trimestre')
     
+    total_servidores_ativos = base_servidores_queryset.count()
+
     status_counts = FolhaPonto.objects.filter(
-        servidor__lotacao__in=unidades_gerenciadas
+        servidor__lotacao__id__in=unidades_atuacao_ids # Alterado aqui
     ).values('status').annotate(total=Count('status')).order_by('status')
 
     status_colors = {
@@ -66,10 +99,10 @@ def agente_dashboard_view(request):
     })
 
     context = {
-        'servidores': servidores_gerenciados,
+        'servidores': servidores_for_template,
         'pendencias': pendencias,
         'folhas_concluidas': folhas_concluidas,
-        'total_servidores_ativos': servidores_gerenciados.count(),
+        'total_servidores_ativos': total_servidores_ativos,
         'chart_data_json': chart_data_json,
     }
     return render(request, 'core/agente_dashboard.html', context)
