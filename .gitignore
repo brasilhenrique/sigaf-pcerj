@@ -12,7 +12,7 @@ db.sqlite3
 
 # Ignorar as bibliotecas estáticas de terceiros do AdminLTE
 # Elas serão servidas pelo WhiteNoise a partir do 'collectstatic'
-static/plugins/
+# static/plugins/
 
 # Ignorar os arquivos de chave SSH
 pcerj_ssh_key
