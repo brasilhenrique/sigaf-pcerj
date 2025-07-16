@@ -73,14 +73,14 @@
                         <div class="btn-group">
                             {# LÓGICA PARA EXIBIR BOTÕES DE CONFERIR/DESFAZER MÊS INTEIRO #}
                             {% if mes_data.pode_conferir_mes %}
-                                <form action="{% url 'core:delegado_conferir_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline">
+                                <form action="{% url 'core:delegado_conferir_mes' folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-info">Conferir Mês</button>
                                 </form>
                             {% endif %}
                             
                             {% if mes_data.pode_desfazer_conferencia_mes %}
-                                <form action="{% url 'core:desfazer_conferencia_mes' folha.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                                <form action="{% url 'core:desfazer_conferencia_mes' folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Desfazer Mês</button>
                                 </form>

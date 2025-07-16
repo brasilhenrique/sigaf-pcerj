@@ -10,21 +10,21 @@
         body { font-family: 'Helvetica', Arial, sans-serif; font-size: 8pt; color: #000; }
         .folha-ponto { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .master-table { width: 100%; border-collapse: collapse; }
-        .master-table td, .master-table th { border: 1px solid black; padding: 2px 4px; vertical-align: top; } /* Diminuído o padding das células da tabela principal */
+        .master-table td, .master-table th { border: 1px solid black; padding: 2px 4px; vertical-align: top; }
         
         /* Estilos do cabeçalho */
         .header-table { width: 100%; border-collapse: collapse; }
-        .header-table td { border: none; padding: 1px 0; font-size: 7.5pt; line-height: 1.1; } /* Fonte um pouco menor e line-height ajustado */
+        .header-table td { border: none; padding: 1px 0; font-size: 7.5pt; line-height: 1.1; }
         .header-table .brasao-cell { width: 60px; text-align: center; vertical-align: middle; padding-right: 5px; }
-        .header-table .brasao-cell img { width: 45px; height: auto; } /* Diminuído o tamanho do brasão */
+        .header-table .brasao-cell img { width: 45px; height: auto; }
         .header-table .gov-info { text-align: left; font-weight: bold; }
         .header-table .gov-info span { font-weight: normal; }
         .header-table .title-center { 
             text-align: center; 
             font-weight: bold; 
             font-size: 8.5pt; 
-            padding-top: 4px; /* Aumentado o padding superior */
-            padding-bottom: 4px; /* Aumentado o padding inferior */
+            padding-top: 4px;
+            padding-bottom: 4px;
         }
         .header-table .right-info { text-align: right; font-weight: bold; }
         .header-table .right-info span { font-weight: normal; }
@@ -34,15 +34,14 @@
         .month-header { background-color: #E0E0E0; font-weight: bold; text-align: center; }
         .day-header { background-color: #E0E0E0; font-weight: bold; text-align: center; font-size: 7pt; }
         .day-cell { text-align: center; font-size: 7.5pt; vertical-align: middle; font-weight: bold; }
-        .separator-col { border-right: 1px solid black !important; width: 1%; background-color: #f0f0f0; }
+        .separator-col { border-right: 1px solid black !important; width: 2%; background-color: #f0f0f0; } /* Ajustei a largura para 2% para dar um pouco mais de respiro */
         .signature-cell { text-align: center; font-size: 6pt; line-height: 1.1; word-break: break-word; vertical-align: middle; padding: 1px 2px; }
-        .ocorrencia-cell {
-            text-align: center;
+        .ocorrencia-cell-small { /* Nova classe para a ocorrência dentro das células de assinatura/conferência */
+            font-size: 6.5pt;
             font-weight: bold;
-            font-size: 7pt;
-            background-color: #f8f9fa;
-            vertical-align: middle;
-            padding: 1px 2px;
+            color: #444;
+            display: block; /* Garante que ocupe a largura e force quebra de linha */
+            margin-top: 2px; /* Pequena margem para separar da assinatura/conferência */
         }
         .pendente-assinatura {
             color: #888;
@@ -109,32 +108,30 @@
                     <td class="day-cell">{{ linha.dia }}</td>
                     {% for dia_obj in linha.meses %}
                         {% if dia_obj %}
-                            {% if dia_obj.codigo.codigo.lower == 'livre' %}
-                                <td class="signature-cell">
+                            {# Célula de Assinatura do Servidor #}
+                            <td class="signature-cell">
+                                {% if dia_obj.codigo.codigo.lower == 'livre' %}
                                     {% if dia_obj.servidor_assinou %}
                                         {{ folha.servidor.nome }}<br>
                                         ID nº {{ folha.servidor.id_funcional }}
                                     {% else %}
                                         <span class="pendente-assinatura">Pendente de Assinatura</span>
                                     {% endif %}
-                                </td>
-                                <td class="signature-cell">
-                                    {% if dia_obj.delegado_conferiu %}
-                                        {{ dia_obj.delegado.nome }}<br>
-                                        ID nº {{ dia_obj.delegado.id_funcional }}
-                                    {% else %}
-                                        <span class="pendente-assinatura">Pendente de Conferência</span>
-                                    {% endif %}
-                                </td>
-                            {% else %}
-                                <td colspan="2" class="ocorrencia-cell">
-                                    {% if dia_obj.codigo.codigo %}
-                                        {{ dia_obj.codigo.denominacao }} - CÓDIGO {{ dia_obj.codigo.codigo }}
-                                    {% else %}
-                                        {{ dia_obj.codigo.denominacao }} - CÓDIGO N/A
-                                    {% endif %}
-                                </td>
-                            {% endif %}
+                                {% else %}
+                                    {# Exibe a ocorrência se o dia não for 'livre' na célula de assinatura #}
+                                    <span class="ocorrencia-cell-small">CÓDIGO {{ dia_obj.codigo.codigo }}</span>
+                                    <span class="ocorrencia-cell-small">{{ dia_obj.codigo.denominacao }}</span>
+                                {% endif %}
+                            </td>
+                            {# Célula de Conferência do Delegado - SEMPRE PRESENTE #}
+                            <td class="signature-cell">
+                                {% if dia_obj.delegado_conferiu %}
+                                    {{ dia_obj.delegado.nome }}<br>
+                                    ID nº {{ dia_obj.delegado.id_funcional }}
+                                {% else %}
+                                    <span class="pendente-assinatura">Pendente de Conferência</span>
+                                {% endif %}
+                            </td>
                             <td class="separator-col"></td>
                         {% else %}
                             <td colspan="3" class="separator-col"></td>

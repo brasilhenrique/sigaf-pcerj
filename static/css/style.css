@@ -79,3 +79,21 @@ body, html {
     display: inline-block; /* Permite quebras de linha mas mantém o alinhamento */
     max-width: calc(100% - 1.5em); /* Ajuste a largura máxima para que o texto não sobreponha */
 }
+
+/* NOVOS ESTILOS PARA DATATABLES - INFORMAÇÃO DA TABELA (PAGINAÇÃO) */
+.dataTables_info {
+    font-size: 0.875rem; /* Tamanho da fonte menor, como o texto secundário do AdminLTE */
+    color: #6c757d; /* Cor cinza sutil */
+    margin-top: 0.5rem; /* Pequena margem superior para espaçamento */
+    padding-left: 0.75rem; /* Ajuste o padding esquerdo para alinhamento com a tabela */
+    padding-right: 0.75rem; /* Ajuste o padding direito */
+}
+
+/* Opcional: Ajuste para a paginação em si, para melhor alinhamento e espaçamento */
+.dataTables_wrapper .row:nth-child(3) { /* Seleciona a linha que contém info e paginação */
+    align-items: center; /* Alinha verticalmente info e paginação */
+}
+.dataTables_paginate.paging_simple_numbers {
+    margin-top: 0.5rem; /* Alinha com a margem superior do info */
+    margin-bottom: 0.5rem; /* Margem inferior */
+}

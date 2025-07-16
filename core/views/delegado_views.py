@@ -70,14 +70,16 @@ def delegado_dashboard_view(request):
     # Encontra folhas de ponto de servidores lotados nas unidades que o usuário logado atua,
     # que tenham status 'Em Andamento' E dias que ainda não foram conferidos.
     
-    # Primeiro, pegamos as folhas que correspondem à lotação e status.
+    # ALTERAÇÃO AQUI: A lógica de pendência agora considera apenas dias 'Livre' assinados e não conferidos.
     base_query = FolhaPonto.objects.filter(
         servidor__lotacao__id__in=unidades_para_conferencia_ids,
         status='Em Andamento', 
-        dias__delegado_conferiu=False 
+        dias__delegado_conferiu=False,
+        dias__servidor_assinou=True, # Adicionado: dia deve estar assinado pelo servidor
+        dias__codigo__codigo__iexact='Livre' # Adicionado: código da ocorrência deve ser 'Livre'
     ).distinct()
 
-    print(f"Base Query (Folhas em Andamento e não conferidas nas unidades de atuação): {base_query.count()} folhas")
+    print(f"Base Query (Folhas em Andamento, dias 'Livre' assinados e não conferidos nas unidades de atuação): {base_query.count()} folhas")
     for f in base_query:
         print(f"  - Folha: {f.servidor.nome} ({f.servidor.perfil}) - Lotação: {f.servidor.lotacao.nome_unidade}")
 
@@ -345,7 +347,7 @@ def delegado_minha_folha_view(request):
         messages.warning(request, "Nenhuma folha de ponto encontrada para o seu perfil no momento.")
     else:
         for folha in folhas_do_usuario:
-            meses_preparados_for_web = preparar_dados_para_web(folha) # <--- AQUI ESTÁ O ERRO
+            meses_preparados_for_web = preparar_dados_para_web(folha)
             
             for mes_data in meses_preparados_for_web:
                 mes_dias = mes_data['dias']
