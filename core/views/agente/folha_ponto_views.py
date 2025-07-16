@@ -15,6 +15,9 @@ from django.db import transaction
 
 
 def agente_required(view_func):
+    """
+    Decorator para garantir que o usuário logado tem o perfil de Agente de Pessoal.
+    """
     @login_required
     def _wrapped_view(request, *args, **kwargs):
         if request.user.perfil != 'Agente de Pessoal':
@@ -23,28 +26,35 @@ def agente_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-@login_required 
+@agente_required 
 def gerenciar_ponto_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) gerenciar os dias de uma folha de ponto.
+    """
     folha_ponto = get_object_or_404(FolhaPonto, id=folha_id)
     servidor = folha_ponto.servidor
 
-    # Lógica de permissão
-    if request.user.perfil == 'Agente de Pessoal':
-        if servidor.lotacao not in request.user.unidades_atuacao.all() and servidor.pk != request.user.pk: # Use .pk para comparar IDs
-            messages.error(request, "Acesso negado. Esta folha não pertence a uma de suas unidades gerenciadas e não é sua própria folha.")
+    # Lógica de permissão para gerenciar a folha:
+    # 1. Se o usuário logado é Administrador Geral, ele pode gerenciar qualquer folha.
+    # 2. Se o usuário logado é Agente de Pessoal:
+    #    a. Ele pode gerenciar a própria folha.
+    #    b. Ele pode gerenciar a folha de um servidor cuja lotação esteja entre suas unidades de atuação.
+    if request.user.perfil == 'Administrador Geral':
+        pass # Admin Geral tem acesso total
+    elif request.user.perfil == 'Agente de Pessoal':
+        if not (servidor.pk == request.user.pk or \
+                (servidor.lotacao and servidor.lotacao in request.user.unidades_atuacao.all())):
+            messages.error(request, "Acesso negado. Esta folha não pertence a uma de suas unidades de atuação ou não é sua própria folha.")
             return redirect('core:agente_dashboard')
-    elif request.user.perfil == 'Administrador Geral':
-        pass
-    else: # Outros perfis que possam ver a folha, mas não editar ou não é a própria folha
-        if servidor.pk != request.user.pk: # Se não for o próprio usuário, não pode gerenciar (apenas visualizar se for delegado conferindo)
-            messages.error(request, "Você não tem permissão para gerenciar folhas de ponto de outros servidores.")
-            return redirect('core:dashboard')
+    else: # Qualquer outro perfil não tem permissão de gerenciamento
+        messages.error(request, "Você não tem permissão para gerenciar folhas de ponto de outros servidores.")
+        return redirect('core:dashboard')
 
 
     if folha_ponto.status == 'Arquivada':
         messages.warning(request, "Esta folha de ponto está arquivada e não pode ser editada.")
         
-    # MODIFICADO: Garante que os dias sejam populados se não existirem, ou sejam recuperados.
+    # Garante que os dias sejam populados se não existirem, ou sejam recuperados.
     if not folha_ponto.dias.exists():
         dias_criados = popular_dias_folha(folha_ponto)
         if dias_criados:
@@ -68,47 +78,29 @@ def gerenciar_ponto_view(request, folha_id):
     return render(request, 'core/gerenciar_ponto.html', context)
 
 
-# ... (O restante do arquivo permanece inalterado) ...
-
-# NOVO: View dedicada para "Minha Folha de Ponto" do Agente de Pessoal
-# Esta view NÃO será mais acessada diretamente pelo menu para assinatura,
-# mas ainda pode ser usada para redirecionamentos internos se necessário.
-@login_required
-@agente_required # Garante que só Agentes de Pessoal acessem esta view
+@agente_required 
 def agente_minha_folha_view(request):
-    agente = request.user
-    
-    hoje = date.today()
-    trimestre_atual = (hoje.month - 1) // 3 + 1
-    
-    agente_folha_ponto = FolhaPonto.objects.filter(
-        servidor=agente,
-        ano=hoje.year,
-        trimestre=trimestre_atual,
-        status__in=['Em Andamento', 'Concluída'] # Filtra por folhas ativas para edição
-    ).first()
-
-    if not agente_folha_ponto:
-        messages.info(request, "Sua folha de ponto para o trimestre atual não foi encontrada. Por favor, crie-a.")
-        return redirect('core:agente_criar_folha', usuario_id=agente.id)
-
-    # ESTA LINHA SERÁ REMOVIDA, pois a URL 'agente_minha_folha' agora aponta para servidor_views.dashboard_view
-    # return redirect('core:gerenciar_ponto', folha_id=agente_folha_ponto.id)
-    # Em vez disso, se esta view for acessada por outro caminho, podemos redirecionar para a própria assinatura:
+    """
+    View dedicada para "Minha Folha de Ponto" do Agente de Pessoal.
+    Redireciona para o dashboard principal onde a própria folha é exibida.
+    """
     return redirect('core:dashboard') # Redireciona para a tela de assinatura para a própria folha do agente.
 
-# ATENÇÃO: Esta view é usada por Admin Geral e Agente de Pessoal para ver histórico de qualquer usuário.
-@login_required
+@login_required # Mantém este login_required pois é acessada por Admin Geral também.
 def agente_historico_folhas_view(request, usuario_id):
+    """
+    Exibe todas as folhas de ponto de um usuário específico.
+    Acessível por Admin Geral (qualquer usuário) e Agente de Pessoal (usuários em suas unidades de atuação).
+    """
     servidor = get_object_or_404(Usuario, id=usuario_id)
 
     # Lógica de permissão:
     # 1. Se o usuário logado é o próprio servidor, pode ver.
     # 2. Se o usuário logado é Agente de Pessoal e o servidor está em uma de suas unidades de atuação.
     # 3. Se o usuário logado é Administrador Geral.
-    # 4. Se o usuário logado é Delegado de Polícia, ele não deveria acessar essa view.
-    if not (request.user == servidor or \
-            (request.user.perfil == 'Agente de Pessoal' and servidor.lotacao in request.user.unidades_atuacao.all()) or \
+    # 4. Outros perfis não têm permissão para ver histórico de outros usuários.
+    if not (request.user.pk == servidor.pk or \
+            (request.user.perfil == 'Agente de Pessoal' and servidor.lotacao and servidor.lotacao in request.user.unidades_atuacao.all()) or \
             request.user.perfil == 'Administrador Geral'):
         messages.error(request, "Você não tem permissão para acessar o histórico de folhas deste servidor.")
         return redirect('core:dashboard') # Redireciona para o dashboard padrão
@@ -126,6 +118,9 @@ def agente_historico_folhas_view(request, usuario_id):
 @require_POST
 @agente_required
 def bloquear_dia_view(request):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência a um dia específico da folha.
+    """
     dia_id = request.POST.get('dia_id')
     folha_id = request.POST.get('folha_id')
     codigo_id = request.POST.get('codigo')
@@ -134,8 +129,9 @@ def bloquear_dia_view(request):
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
     # Permissão para o agente (e admin geral)
+    # Se a folha.servidor.lotacao estiver dentro das unidades de atuação do agente
     if not (request.user.perfil == 'Administrador Geral' or 
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para alterar este dia de ponto.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
 
@@ -181,11 +177,15 @@ def bloquear_dia_view(request):
 @agente_required
 @require_POST
 def bloquear_dias_em_lote_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência em lote a vários dias da folha.
+    """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
     
     # Permissão para o agente (e admin geral)
+    # Se a folha.servidor.lotacao estiver dentro das unidades de atuação do agente
     if not (request.user.perfil == 'Administrador Geral' or 
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para alterar esta folha de ponto em lote.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
     
@@ -201,7 +201,6 @@ def bloquear_dias_em_lote_view(request, folha_id):
         data_fim_lote = form.cleaned_data['data_fim_lote']
 
         dias_afetados_count = 0
-        dias_ignorados_count = 0
         alteracoes_detalhes = []
 
         dias_para_alterar = DiaPonto.objects.filter(
@@ -259,6 +258,9 @@ def bloquear_dias_em_lote_view(request, folha_id):
 
 @agente_required
 def agente_criar_folha_view(request):
+    """
+    Permite ao Agente de Pessoal criar uma nova folha de ponto manualmente para um servidor.
+    """
     # Pré-selecionar o servidor se um usuario_id for passado na URL (útil ao clicar de um histórico)
     initial_servidor = request.GET.get('usuario_id')
     initial_data = {}
@@ -268,7 +270,7 @@ def agente_criar_folha_view(request):
             servidor_obj = Usuario.objects.get(id=initial_servidor, lotacao__in=request.user.unidades_atuacao.all())
             initial_data['servidor'] = servidor_obj
         except Usuario.DoesNotExist:
-            messages.warning(request, "Servidor pré-selecionado não encontrado ou não pertence às suas unidades gerenciadas.")
+            messages.warning(request, "Servidor pré-selecionado não encontrado ou não pertence às suas unidades de atuação.")
 
     if request.method == 'POST':
         form = CriarFolhaManualForm(request.POST, user=request.user)
@@ -305,12 +307,16 @@ def agente_criar_folha_view(request):
 @agente_required
 @require_POST
 def agente_deletar_folha_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) excluir permanentemente uma folha de ponto.
+    Esta é uma ação irreversível.
+    """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
     # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
-    # ou Administradores Gerais podem "deletar" (mover para arquivada)
+    # ou Administradores Gerais
     if not (request.user.perfil == 'Administrador Geral' or 
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para realizar esta ação.")
         return redirect('core:agente_historico_folhas', usuario_id=folha.servidor.id)
 
@@ -342,12 +348,16 @@ def agente_deletar_folha_view(request, folha_id):
 @agente_required
 @require_POST
 def arquivar_folha_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) arquivar uma folha de ponto.
+    Uma folha arquivada não pode ser editada até ser desarquivada.
+    """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
     # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
     # ou Administradores Gerais
     if not (request.user.perfil == 'Administrador Geral' or 
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para arquivar esta folha.")
         next_url = request.POST.get('next', 'core:agente_dashboard')
         return redirect(next_url)
@@ -373,19 +383,24 @@ def arquivar_folha_view(request, folha_id):
 @agente_required
 @require_POST
 def desarquivar_folha_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) desarquivar uma folha de ponto.
+    """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
     # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
     # ou Administradores Gerais
     if not (request.user.perfil == 'Administrador Geral' or 
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para desarquivar esta folha.")
         return redirect('core:folhas_arquivadas')
 
     if folha.status != 'Arquivada':
         messages.info(request, f"A folha de {folha.servidor.nome} - {folha.get_trimestre_display()} de {folha.ano} não está arquivada.")
     else:
-        folha.status = 'Em Andamento' # Ou 'Concluída' se todos os dias já estiverem ok, mas 'Em Andamento' é mais seguro.
+        # Ao desarquivar, volta para 'Em Andamento' (ou 'Concluída' se todos os dias estiverem ok)
+        # O safest é 'Em Andamento' para permitir re-conferência ou ajustes.
+        folha.status = 'Em Andamento'
         folha.ativa = True
         folha.save()
         messages.success(request, f"Folha de {folha.servidor.nome} - {folha.get_trimestre_display()} de {folha.ano} desarquivada com sucesso e voltou para 'Em Andamento'!")
@@ -401,9 +416,12 @@ def desarquivar_folha_view(request, folha_id):
 @agente_required
 @require_POST
 def arquivar_lote_view(request):
+    """
+    Permite ao Agente de Pessoal arquivar todas as folhas 'Concluídas' nas suas unidades de atuação.
+    """
     agente = request.user
     
-    # Busca todas as folhas CONCLUÍDAS nas unidades gerenciadas pelo agente
+    # Busca todas as folhas CONCLUÍDAS nas unidades de atuação do agente
     # Exclui folhas de Delegados e Administradores Gerais
     folhas_concluidas = FolhaPonto.objects.filter(
         servidor__lotacao__in=agente.unidades_atuacao.all(),
@@ -413,7 +431,7 @@ def arquivar_lote_view(request):
     ).distinct()
 
     if not folhas_concluidas.exists():
-        messages.info(request, "Nenhuma folha concluída para arquivar em lote nas suas unidades gerenciadas.")
+        messages.info(request, "Nenhuma folha concluída para arquivar em lote nas suas unidades de atuação.")
         return redirect('core:agente_dashboard')
 
     count_arquivadas = 0
@@ -421,7 +439,7 @@ def arquivar_lote_view(request):
 
     with transaction.atomic():
         for folha in folhas_concluidas:
-            if folha.status == 'Concluída': # Garante que só concluidas sejam arquivadas
+            if folha.status == 'Concluída': # Garante que só concluídas sejam arquivadas
                 folha.status = 'Arquivada'
                 folha.ativa = False
                 folha.save()
@@ -446,13 +464,15 @@ def arquivar_lote_view(request):
 
 
 @agente_required
-@login_required
 def folhas_arquivadas_view(request):
+    """
+    Exibe todas as folhas de ponto arquivadas para as unidades de atuação do Agente de Pessoal.
+    """
     agente = request.user
 
-    # Filtra as folhas arquivadas das unidades gerenciadas pelo agente
+    # Filtra as folhas arquivadas dos servidores que estão lotados nas unidades de atuação do agente.
     folhas_arquivadas_queryset = FolhaPonto.objects.filter(
-        servidor__lotacao__in=agente.unidades_atuacao.all(),
+        servidor__lotacao__in=agente.unidades_atuacao.all(), # Filtra pelas unidades de atuação do agente
         status='Arquivada'
     ).select_related('servidor', 'unidade_id_geracao').order_by('-ano', '-trimestre', 'servidor__nome')
 
@@ -472,22 +492,25 @@ def folhas_arquivadas_view(request):
     folhas_por_ano_ordenado = sorted(folhas_por_ano.items(), key=lambda item: item[0], reverse=True)
 
     context = {
-        'folhas_por_ano': folhas_por_ano_ordenado
+        'folhas_por_ano_ordenado': folhas_por_ano_ordenado # Passa a lista ordenada para o template
     }
     return render(request, 'core/folhas_arquivadas.html', context)
 
 @require_POST
 @agente_required # Ou admin_required, se admin geral também puder salvar
 def salvar_observacoes_folha_view(request, folha_id):
+    """
+    Permite ao Agente de Pessoal (ou Admin Geral) salvar observações em uma folha de ponto.
+    """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão: Agente de Pessoal que gerencia a unidade do servidor 
-    # ou é o próprio servidor
-    # OU Administrador Geral.
-    # Delegados podem ver, mas não editar observações, a menos que especificado.
+    # Permissão:
+    # 1. Se o usuário logado é Administrador Geral.
+    # 2. Se o usuário logado é Agente de Pessoal e a lotação do servidor da folha está entre as unidades de atuação do agente.
+    # 3. Se o usuário logado é o próprio servidor da folha e não é Delegado de Polícia nem Administrador Geral (outros podem ver, mas não editar).
     if not (request.user.perfil == 'Administrador Geral' or
-            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all()) or
-            (request.user == folha.servidor and request.user.perfil not in ['Delegado de Polícia', 'Administrador Geral'])
+            (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all()) or
+            (request.user.pk == folha.servidor.pk and request.user.perfil not in ['Delegado de Polícia', 'Administrador Geral'])
             ):
         messages.error(request, "Você não tem permissão para salvar observações nesta folha.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)

@@ -14,13 +14,14 @@
     </a>
 </div>
 
-{% for ano, trimestres in folhas_por_ano.items %}
+{% for ano, trimestres in folhas_por_ano_ordenado %}
 <div class="card card-outline card-secondary">
     <div class="card-header">
         <h3 class="card-title">Ano de {{ ano }}</h3>
     </div>
     <div class="card-body">
-        {% for trimestre_display, folhas_do_trimestre in trimestres.items %} {# Renomeado a variável para evitar conflito #}
+        {# Este loop interno continua com .items() porque 'trimestres' é um dicionário #}
+        {% for trimestre_display, folhas_do_trimestre in trimestres.items %} 
         <h5 class="mb-2 mt-3"><strong>{{ trimestre_display }}</strong></h5>
         <table class="table table-sm table-bordered">
             <thead>
@@ -36,13 +37,15 @@
                     <td>{{ folha.servidor.nome }}</td>
                     <td>{{ folha.unidade_id_geracao.nome_unidade }}</td>
                     <td>
-                        <form action="{% url 'core:desarquivar_folha' folha.id %}" method="post" class="d-inline"> {# Ajustado para usar namespace #}
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-xs btn-warning" title="Desarquivar Folha">
-                                <i class="fas fa-box-open"></i> Desarquivar
-                            </button>
-                        </form>
-                        <a href="{% url 'core:gerar_pdf_individual' folha.id %}" class="btn btn-xs btn-secondary ml-1" title="Gerar PDF Individual"><i class="fas fa-file-pdf"></i> PDF</a> {# Adicionado botão PDF #}
+                        <div class="d-flex align-items-center">
+                            <form action="{% url 'core:desarquivar_folha' folha.id %}" method="post" class="mr-1">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-xs btn-warning" title="Desarquivar Folha">
+                                    <i class="fas fa-box-open"></i>
+                                </button>
+                            </form>
+                            <a href="{% url 'core:gerar_pdf_individual' folha.id %}" class="btn btn-xs btn-secondary" title="Gerar PDF Individual"><i class="fas fa-file-pdf"></i></a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -52,7 +55,7 @@
     </div>
 </div>
 {% empty %}
-<div class="alert alert-info text-center"> {# Ajustado para alert-info #}
+<div class="alert alert-info text-center">
     Nenhuma folha de ponto foi arquivada ainda em suas unidades gerenciadas.
 </div>
 {% endfor %}
