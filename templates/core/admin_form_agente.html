@@ -7,35 +7,59 @@
 
 {% block extra_css %}
 <style>
-    .form-check-label-small {
-        font-size: 0.8em !important; /* Ajustado para um tamanho um pouco maior, ou remova se não for necessário */
-        vertical-align: middle;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-        display: block;
-        padding-left: 0.25em;
-    }
+    /* Estilos para o contêiner de checkboxes */
     .small-checkbox-container .form-check {
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.2rem; /* Ajustado para 0.2rem, igual ao do delegado */
+        display: flex; /* Manter display flex para alinhar checkbox com label */
+        align-items: center; /* Alinha verticalmente item dentro do flex */
+        width: 100%; /* Ocupa a largura total da sua célula/coluna */
     }
-    .small-checkbox-container .col-md-4 {
-        padding-right: 5px;
-        padding-left: 5px;
+
+    /* Ajuste para o input do checkbox */
+    .small-checkbox-container .form-check-input {
+        vertical-align: middle; /* Alinha verticalmente ao meio */
+        margin-top: 0; /* Remove margem superior padrão que pode causar desalinhamento */
+        position: relative; /* Permite posicionamento relativo com 'top' */
+        top: -1px; /* Ajuste fino para mover ligeiramente para cima */
+        flex-shrink: 0; /* Impede que o checkbox encolha */
     }
-    /* Estilo para forçar a visibilidade e rolagem para o campo de unidades */
+
+    /* Ajuste para o label do checkbox */
+    .small-checkbox-container .form-check-label {
+        font-size: 0.6em !important; /* Definido para 0.6em e !important para garantir */
+        vertical-align: middle; /* Garante que o texto também esteja alinhado */
+        line-height: 1.2; /* Controla a altura da linha para texto multilinha */
+        padding-left: 0.25em; /* Espaçamento entre o checkbox e o texto */
+        white-space: normal; /* Permite que o texto quebre linhas */
+        word-wrap: break-word; /* Força a quebra de palavras longas */
+        overflow-wrap: break-word; /* Propriedade mais moderna para word-wrap */
+        display: inline-block; /* Permite controlar largura e quebra de linha */
+    }
+
+    /* Estilo para a célula/coluna que contém cada checkbox */
+    .small-checkbox-item-col {
+        text-align: left !important; 
+    }
+
+    /* REMOVIDO: max-height e overflow-y para que a caixa de rolagem não seja forçada neste formulário.
+       Isso fará com que a lista se expanda completamente, como as outras, a menos que o conteúdo natural
+       do navegador (altura da tela) force o scroll da página inteira. */
+    /* .checkbox-scroll-area não terá mais max-height e overflow-y: auto; aqui */
     .checkbox-scroll-area {
-        max-height: 250px; /* Altura máxima para ativar o scroll */
-        overflow-y: auto; /* Adiciona scroll vertical quando o conteúdo excede a altura máxima */
-        border: 1px solid #dee2e6; /* Borda para visualizar a área de scroll */
-        padding: 10px; /* Padding interno */
-        background-color: #f8f9fa; /* Fundo claro */
-        border-radius: 5px; /* Cantos arredondados */
+        /* Se você ainda quiser alguma borda ou padding específico para esta área, mantenha aqui */
+        border: 1px solid #dee2e6; 
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        /* Remova as linhas abaixo para desativar o scroll forçado */
+        /* max-height: 250px; */
+        /* overflow-y: auto; */
     }
-    /* Estilo para garantir que os labels dos checkboxes não fiquem escondidos */
+
+    /* Ajustar especificamente o font-size do label dentro da área de scroll para 0.6em */
     .checkbox-scroll-area .form-check-label {
-        font-size: 0.9em; /* Ajuste o tamanho da fonte se necessário */
-        padding-left: 0.5em; /* Espaçamento entre o checkbox e o texto */
+        font-size: 0.6em; /* Mudar para 0.6em */
+        padding-left: 0.5em;
         line-height: 1.2;
     }
 </style>
@@ -92,14 +116,14 @@
                     <hr>
                     <div class="form-group">
                         <label>Unidades de Atuação (O agente terá permissão para gerenciar os servidores destas unidades)</label>
-                        <div class="checkbox-scroll-area">
+                        <div class="checkbox-scroll-area"> 
                             {# RENDERIZAÇÃO MANUAL RESTAURADA #}
                             <div class="row p-2 small-checkbox-container">
-                                {% for subwidget in form.unidades_atuacao.subwidgets %} {# Correção aqui: [cite: 1816] #}
-                                <div class="col-md-4">
+                                {% for subwidget in form.unidades_atuacao.subwidgets %}
+                                <div class="col-md-4 small-checkbox-item-col"> {# col-md-4 para 3 colunas #}
                                     <div class="form-check">
                                         {{ subwidget.tag }}
-                                        <label class="form-check-label form-check-label-small" for="{{ subwidget.id_for_label }}">
+                                        <label class="form-check-label" for="{{ subwidget.id_for_label }}">
                                             {{ subwidget.choice_label }}
                                         </label>
                                     </div>

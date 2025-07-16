@@ -40,7 +40,7 @@
                     <td>{{ agente.id_funcional }}</td>
                     <td>{{ agente.lotacao.nome_unidade|default:"N/A" }}</td>
                     <td>
-                        {% for unidade in agente.unidades_gerenciadas.all %}
+                        {% for unidade in agente.unidades_atuacao.all %}
                             <span class="badge badge-pill badge-primary">{{ unidade.nome_unidade }}</span>
                         {% empty %}
                             Nenhuma
