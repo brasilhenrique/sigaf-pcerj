@@ -1,3 +1,4 @@
+{# templates/core/delegado_conferencia_folha.html #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
@@ -72,7 +73,8 @@
                                     <td class="text-right" style="width: 140px;">
                                         {% if folha.status != 'Arquivada' %}
                                             {# Botão Conferir/Desfazer para todos os dias, se não estiver conferido #}
-                                            {% if not dia.delegado_conferiu %}
+                                            {# ALTERAÇÃO AQUI: REESCRITA DA CONDIÇÃO PARA TEMPLATE SYNTAX #}
+                                            {% if not dia.delegado_conferiu and dia.codigo.codigo.lower != 'livre' or not dia.delegado_conferiu and dia.servidor_assinou %}
                                                 <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post">
                                                     {% csrf_token %}
                                                     <button type="submit" class="btn btn-sm btn-info">Conferir</button>

@@ -1,3 +1,4 @@
+{# templates/core/delegado_minha_folha.html #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
@@ -105,7 +106,8 @@
                                                 </form>
                                             {% endif %}
                                             {# Botões de Conferir/Desfazer conferência #}
-                                            {% if dia.servidor_assinou and not dia.delegado_conferiu %}
+                                            {# ALTERAÇÃO AQUI: REESCRITA DA CONDIÇÃO PARA TEMPLATE SYNTAX #}
+                                            {% if not dia.delegado_conferiu and dia.codigo.codigo.lower != 'livre' or not dia.delegado_conferiu and dia.servidor_assinou %}
                                                 <form action="{% url 'core:delegado_conferir_dia' dia.id %}" method="post" class="d-inline ml-1">
                                                     {% csrf_token %}
                                                     <button type="submit" class="btn btn-sm btn-info" title="Conferir sua própria assinatura">Conferir</button>
