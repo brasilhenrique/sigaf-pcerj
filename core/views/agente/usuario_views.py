@@ -9,7 +9,7 @@ from django.db import transaction
 from datetime import date 
 
 from core.models import Usuario, Transferencia, Unidade, FolhaPonto
-from core.forms import UsuarioCreationForm, UsuarioChangeForm, TransferenciaForm, AtribuirConferenteForm # Importado novo form
+from core.forms import UsuarioCreationForm, UsuarioChangeForm, TransferenciaForm, AtribuirConferenteForm 
 from core.utils import registrar_log
 
 def agente_required(view_func):
@@ -33,7 +33,7 @@ def adicionar_usuario_view(request):
                 'novo_usuario_id_funcional': novo_usuario.id_funcional,
                 'perfil': novo_usuario.perfil,
                 'lotacao': novo_usuario.lotacao.nome_unidade if novo_usuario.lotacao else 'N/A',
-                'unidades_atuacao_ids': list(novo_usuario.unidades_atuacao.all().values_list('id', flat=True)) # Logando unidades_atuacao
+                'unidades_atuacao_ids': list(novo_usuario.unidades_atuacao.all().values_list('id', flat=True)) 
             })
             messages.success(request, 'Usuário criado com sucesso!')
             return redirect('core:agente_dashboard')
@@ -47,14 +47,16 @@ def editar_usuario_view(request, usuario_id):
 
     # Permissão: Um agente só pode editar usuários lotados em suas unidades de atuação.
     # Ele pode editar a si mesmo (se for Agente de Pessoal).
-    # Não pode editar Administradores Gerais ou Delegados (perfis superiores que não são gerenciados por essa interface).
+    # MODIFICAÇÃO: Remove a restrição de edição para 'Delegado de Polícia'.
+    # O Agente de Pessoal NÃO pode editar Administradores Gerais.
     if not ((usuario.lotacao and usuario.lotacao in request.user.unidades_atuacao.all()) or usuario == request.user) or \
-       usuario.perfil in ['Administrador Geral', 'Delegado de Polícia']:
+       usuario.perfil == 'Administrador Geral': 
         messages.error(request, 'Você não tem permissão para editar este usuário.')
         return redirect('core:agente_dashboard')
 
     # Se o usuário a ser editado é um Agente de Pessoal (mas não é o próprio agente logado),
     # o agente logado não pode editar, pois a gestão de agentes é no Admin Geral.
+    # Esta é uma regra interna para evitar que Agentes gerenciem outros Agentes (exceto a si mesmos).
     if usuario.perfil == 'Agente de Pessoal' and usuario != request.user:
         messages.error(request, 'Você não pode editar outros Agentes de Pessoal por esta interface. Utilize o painel de Administrador Geral.')
         return redirect('core:agente_dashboard')
@@ -62,11 +64,11 @@ def editar_usuario_view(request, usuario_id):
     if request.method == 'POST':
         form = UsuarioChangeForm(request.POST, instance=usuario, request=request) 
         if form.is_valid():
-            mudancas = {k: {'old': form.initial.get(k), 'new': form.cleaned_data.get(k)} 
-                        for k, v in form.cleaned_data.items() if form.cleaned_data.get(k) != form.initial.get(k)}
+            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))} 
+                        for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))}
             
             # Captura unidades de atuação antigas para o log ANTES de salvar o form
-            unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
+            unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True)) 
 
             if 'status_servidor' in mudancas:
                 if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and usuario.ativo:
@@ -87,18 +89,18 @@ def editar_usuario_view(request, usuario_id):
                     usuario.save(update_fields=['is_staff'])
 
             usuario = form.save() 
-            form.save_m2m() # Salva as relações ManyToMany, como 'unidades_atuacao'
+            # UserChangeForm já cuida de salvar as relações ManyToMany (unidades_atuacao) em seu próprio método save()
 
             # Captura unidades de atuação novas para o log DEPOIS de salvar
             unidades_atuacao_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
-            mudancas_unidades_atuacao = {}
+            mudancas_unidades_atuacao = {} # Inicializa o dicionário vazio
             if unidades_atuacao_antigas_ids != unidades_atuacao_novas_ids:
                 unidades_adicionadas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_novas_ids - unidades_atuacao_antigas_ids)]
                 unidades_removidas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_antigas_ids - unidades_atuacao_novas_ids)]
                 mudancas_unidades_atuacao = {
                     'adicionadas': unidades_adicionadas,
-                    'removidas': unidades_removidas
+                    'removidas': unidades_removidas # <-- Corrigido aqui para usar 'unidades_removidas'
                 }
             
             if mudancas or mudancas_unidades_atuacao: # Loga se houver mudanças em campos normais ou em unidades de atuação
@@ -375,7 +377,7 @@ def remover_conferente_view(request, usuario_id):
     # Não pode remover Delegados (que não são atribuídos aqui), nem Admin Geral.
     # O usuário pode ser um Conferente (pelas unidades_atuacao) ou um Delegado.
     if not (usuario.lotacao and usuario.lotacao in agente.unidades_atuacao.all()) or \
-       usuario.perfil in ['Administrador Geral', 'Agente de Pessoal', 'Delegado de Polícia']: # Delegado não pode ser removido daqui
+        usuario.perfil in ['Administrador Geral', 'Agente de Pessoal', 'Delegado de Polícia']: # Delegado não pode ser removido daqui
         messages.error(request, "Você não tem permissão para remover o status de Conferente deste usuário.")
         return redirect('core:listar_conferentes')
 
