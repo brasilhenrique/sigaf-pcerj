@@ -1,4 +1,5 @@
-# F:\dev\sigaf-novo\core\views\admin_views.py (COMPLETO E MODIFICADO - REMOVENDO agente_historico_folhas_view)
+# F:\dev\sigaf-novo\core\views\admin_views.py
+# (COMPLETO E CORRIGIDO - REMOVIDO O form.save_m2m() problemático em editar_agente_view)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
@@ -38,7 +39,7 @@ def admin_geral_dashboard_view(request):
     total_usuarios = Usuario.objects.filter(ativo=True).count()
     total_unidades = Unidade.objects.filter(ativo=True).count()
     total_agentes = Usuario.objects.filter(ativo=True, perfil='Agente de Pessoal').count()
-    total_delegados = Usuario.objects.filter(ativo=True, perfil='Delegado de Polícia').count() # Adicionado contagem de delegados
+    total_delegados = Usuario.objects.filter(ativo=True, perfil='Delegado de Polícia').count()
 
     hoje = date.today()
     sete_dias_atras = hoje - timedelta(days=6)
@@ -65,7 +66,7 @@ def admin_geral_dashboard_view(request):
         'total_usuarios': total_usuarios,
         'total_unidades': total_unidades,
         'total_agentes': total_agentes,
-        'total_delegados': total_delegados, # Passando para o contexto
+        'total_delegados': total_delegados,
         'total_logs': LogAuditoria.objects.count(),
         'login_chart_labels_json': json.dumps(login_chart_labels),
         'login_chart_data_json': json.dumps(login_chart_data),
@@ -85,7 +86,7 @@ def adicionar_unidade_view(request):
         form = UnidadeForm(request.POST)
         if form.is_valid():
             nova_unidade = form.save()
-            registrar_log(request, 'UNIDADE_CRIADA', { # Adicionado log
+            registrar_log(request, 'UNIDADE_CRIADA', {
                 'unidade_id': nova_unidade.id,
                 'nome_unidade': nova_unidade.nome_unidade,
                 'codigo_ua': nova_unidade.codigo_ua,
@@ -105,10 +106,10 @@ def editar_unidade_view(request, unidade_id):
         form = UnidadeForm(request.POST, instance=unidade)
         if form.is_valid():
             mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))}
-                        for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))} # Comparação de strings
+                        for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))}
             
             form.save()
-            if mudancas: # Registrar log apenas se houver mudanças reais
+            if mudancas:
                 registrar_log(request, 'UNIDADE_EDITADA', {
                     'unidade_id': unidade.id,
                     'nome_unidade': unidade.nome_unidade,
@@ -148,7 +149,6 @@ def inativar_unidade_view(request, unidade_id):
     unidade = get_object_or_404(Unidade, id=unidade_id)
     if request.method == 'POST':
         unidade.ativo = not unidade.ativo
-        # Opcional: ajustar status_servidor se for inativado.
         if not unidade.ativo and unidade.status_servidor == 'Ativo':
             unidade.status_servidor = 'Demitido' 
             unidade.data_inativacao = date.today()
@@ -157,7 +157,7 @@ def inativar_unidade_view(request, unidade_id):
             unidade.data_inativacao = None
 
         unidade.save()
-        log_acao = 'UNIDADE_ATIVADA' if unidade.ativo else 'UNIDADE_INATIVADA' # Adicionado log
+        log_acao = 'UNIDADE_ATIVADA' if unidade.ativo else 'UNIDADE_INATIVADA'
         registrar_log(request, log_acao, {
             'unidade_id': unidade.id,
             'nome_unidade': unidade.nome_unidade,
@@ -184,14 +184,14 @@ def adicionar_agente_view(request):
     if request.method == 'POST':
         form = AdminAgenteCreationForm(request.POST)
         if form.is_valid():
-            novo_agente = form.save(commit=False) 
+            novo_agente = form.save(commit=False)
             novo_agente.perfil = 'Agente de Pessoal' 
             novo_agente.username = novo_agente.id_funcional 
             novo_agente.set_password(novo_agente.id_funcional) 
             novo_agente.save() 
             form.save_m2m() 
             
-            registrar_log(request, 'AGENTE_CRIADO', { 
+            registrar_log(request, 'AGENTE_CRIADO', {
                 'agente_id': novo_agente.id,
                 'agente_nome': novo_agente.nome,
                 'agente_id_funcional': novo_agente.id_funcional,
@@ -221,15 +221,14 @@ def editar_agente_view(request, agente_id):
     if request.method == 'POST':
         form = AdminAgenteChangeForm(request.POST, instance=agente)
         if form.is_valid():
-            mudancas_status = {} # Renomeado para maior clareza
+            mudancas_status = {}
             if form.cleaned_data['status_servidor'] != form.initial.get('status_servidor'):
                 mudancas_status['status_servidor'] = {
                     'old': form.initial.get('status_servidor'),
                     'new': form.cleaned_data['status_servidor']
                 }
             
-            # Lógica para inativar/reativar baseado no status_servidor
-            if mudancas_status.get('status_servidor'): # Usa o dicionário
+            if mudancas_status.get('status_servidor'):
                 if mudancas_status['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and agente.ativo:
                     agente.ativo = False
                     agente.data_inativacao = date.today()
@@ -239,13 +238,11 @@ def editar_agente_view(request, agente_id):
                     agente.data_inativacao = None
                     messages.info(request, f"O Agente {agente.nome} foi automaticamente reativado e a data de inativação removida.")
 
-            # Captura unidades de atuação antigas para o log ANTES de salvar o form
             unidades_atuacao_antigas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
             
-            agente = form.save() # Salva o objeto principal
-            form.save_m2m() # Salva as relações ManyToMany (unidades_atuacao)
+            agente = form.save() # <--- AQUI ESTAVA O ERRO ANTES. O form.save() já salva.
+            # form.save_m2m()  <--- LINHA REMOVIDA. NUNCA CHAME save_m2m() APÓS save(commit=True)
             
-            # Captura unidades de atuação novas para o log DEPOIS de salvar
             unidades_atuacao_novas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
 
             mudancas_unidades_atuacao = {}
@@ -258,10 +255,10 @@ def editar_agente_view(request, agente_id):
                 }
             
             if mudancas_status or mudancas_unidades_atuacao: 
-                registrar_log(request, 'AGENTE_EDITADO', { # Adicionado log
+                registrar_log(request, 'AGENTE_EDITADO', {
                     'agente_id': agente.id,
                     'agente_nome': agente.nome,
-                    'mudancas_status': mudancas_status, # Mudado nome da chave
+                    'mudancas_status': mudancas_status,
                     'mudancas_unidades_atuacao': mudancas_unidades_atuacao
                 })
 
@@ -287,7 +284,6 @@ def inativar_agente_view(request, agente_id):
     agente = get_object_or_404(Usuario, id=agente_id, perfil='Agente de Pessoal')
     if request.method == 'POST':
         agente.ativo = not agente.ativo
-        # Opcional: ajustar status_servidor se for inativado.
         if not agente.ativo and agente.status_servidor == 'Ativo':
             agente.status_servidor = 'Demitido' 
             agente.data_inativacao = date.today()
@@ -296,7 +292,7 @@ def inativar_agente_view(request, agente_id):
             agente.data_inativacao = None
 
         agente.save()
-        log_acao = 'AGENTE_ATIVADO' if agente.ativo else 'AGENTE_INATIVADO' # Adicionado log
+        log_acao = 'AGENTE_ATIVADO' if agente.ativo else 'AGENTE_INATIVADO'
         registrar_log(request, log_acao, {
             'agente_id': agente.id,
             'agente_nome': agente.nome,
@@ -311,15 +307,7 @@ def inativar_agente_view(request, agente_id):
 @admin_required
 def listar_usuarios_view(request):
     search_query = request.GET.get('q', '')
-    # Para listar TODOS os usuários ativos (incluindo Admin Geral, Agentes, Delegados, Servidores-Conferentes e Servidores comuns)
     usuarios_queryset = Usuario.objects.filter(ativo=True)
-
-    # --- INÍCIO DA SEÇÃO DE DEPURAÇÃO ---
-    print("\n--- DEPURAÇÃO LISTAR USUÁRIOS ADMIN ---")
-    print(f"Queryset para listar usuários (raw): {usuarios_queryset}")
-    print(f"Usuários encontrados na queryset: {list(usuarios_queryset)}")
-    print("--- FIM DA SEÇÃO DE DEPURAÇÃO ---\n")
-    # --- FIM DA SEÇÃO DE DEPURAÇÃO ---
 
     if search_query:
         usuarios_queryset = usuarios_queryset.filter(
@@ -327,7 +315,6 @@ def listar_usuarios_view(request):
             Q(id_funcional__icontains=search_query)
         )
     
-    # A ordenação e agrupamento por lotação (e 'Não Atribuída') já está configurada
     usuarios = sorted(usuarios_queryset.all(), key=lambda u: (u.lotacao.nome_unidade if u.lotacao else 'Não Atribuída', u.nome))
 
     usuarios_por_lotacao = {}
@@ -345,16 +332,16 @@ def listar_usuarios_view(request):
 @admin_required
 def adicionar_usuario_admin_view(request):
     if request.method == 'POST':
-        form = AdminUsuarioCreationForm(request.POST) # Não precisa passar `request` para Admin forms
+        form = AdminUsuarioCreationForm(request.POST)
         if form.is_valid():
             novo_usuario = form.save()
-            registrar_log(request, 'USER_CREATE_BY_ADMIN', { # Adicionado log
+            registrar_log(request, 'USER_CREATE_BY_ADMIN', { 
                 'novo_usuario_id': novo_usuario.id,
                 'novo_usuario_nome': novo_usuario.nome,
                 'novo_usuario_id_funcional': novo_usuario.id_funcional,
                 'perfil': novo_usuario.perfil,
                 'lotacao': novo_usuario.lotacao.nome_unidade if novo_usuario.lotacao else 'N/A',
-                'unidades_atuacao_ids': list(novo_usuario.unidades_atuacao.all().values_list('id', flat=True)) # Logando unidades_atuacao
+                'unidades_atuacao_ids': list(novo_usuario.unidades_atuacao.all().values_list('id', flat=True))
             })
             messages.success(request, 'Usuário criado com sucesso!')
             return redirect('core:listar_usuarios')
@@ -373,13 +360,12 @@ def editar_usuario_admin_view(request, usuario_id):
     if request.method == 'POST':
         form = AdminUsuarioChangeForm(request.POST, instance=usuario)
         if form.is_valid():
-            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))}
-                        for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))} # Comparação de strings
             
-            # Captura unidades de atuação antigas para o log ANTES de salvar o form
+            mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))}
+                        for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))}
+            
             unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True)) 
 
-            # Lógica para inativar/reativar baseado no status_servidor (mantida)
             if 'status_servidor' in mudancas:
                 if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and usuario.ativo:
                     usuario.ativo = False
@@ -390,17 +376,14 @@ def editar_usuario_admin_view(request, usuario_id):
                     usuario.data_inativacao = None
                     messages.info(request, f"O usuário {usuario.nome} foi automaticamente reativado e a data de inativação removida.")
             
-            # Garante que `is_staff` seja False para perfis comuns, a menos que explicitamente marcado no Admin Django.
-            # Um servidor comum (mesmo que conferente) não deve ter acesso ao admin.
             if usuario.perfil in [cargo[0] for cargo in Usuario.POLICIA_CARGOS]:
                 if usuario.is_staff:
                     usuario.is_staff = False
                     usuario.save(update_fields=['is_staff'])
 
             form.save()
-            form.save_m2m() # Salva as relações ManyToMany, como 'unidades_atuacao'
+            form.save_m2m() 
             
-            # Captura unidades de atuação novas para o log DEPOIS de salvar
             unidades_atuacao_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
             mudancas_unidades_atuacao = {}
@@ -409,11 +392,11 @@ def editar_usuario_admin_view(request, usuario_id):
                 unidades_removidas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_antigas_ids - unidades_atuacao_novas_ids)]
                 mudancas_unidades_atuacao = {
                     'adicionadas': unidades_adicionadas,
-                    'removidas': mudancas_removidas
+                    'removidas': unidades_removidas
                 }
 
             if mudancas or mudancas_unidades_atuacao:
-                registrar_log(request, 'USER_EDIT_BY_ADMIN', { # Adicionado log
+                registrar_log(request, 'USER_EDIT_BY_ADMIN', {
                     'usuario_id': usuario.id,
                     'usuario_nome': usuario.nome,
                     'mudancas': mudancas,
@@ -438,17 +421,15 @@ def inativar_usuario_admin_view(request, usuario_id):
 
     if request.method == 'POST':
         usuario.ativo = not usuario.ativo
-        # Ajusta status_servidor quando o usuário é inativado por esta função
         if not usuario.ativo and usuario.status_servidor == 'Ativo':
             usuario.status_servidor = 'Demitido'
             usuario.data_inativacao = date.today()
-        # Ajusta status_servidor quando o usuário é reativado por esta função
         elif usuario.ativo and usuario.status_servidor != 'Ativo':
             usuario.status_servidor = 'Ativo'
             usuario.data_inativacao = None
         
         usuario.save()
-        log_acao = 'USUARIO_ATIVADO' if usuario.ativo else 'USUARIO_INATIVADO' # Adicionado log
+        log_acao = 'USUARIO_ATIVADO' if usuario.ativo else 'USUARIO_INATIVADO'
         registrar_log(request, log_acao, {
             'usuario_id': usuario.id,
             'usuario_nome': usuario.nome,
@@ -485,16 +466,16 @@ def deletar_folha_permanente_view(request, folha_id):
         with transaction.atomic():
             servidor_nome = folha.servidor.nome
             periodo = f"{folha.get_trimestre_display()} de {folha.ano}"
-            folha_id_log = folha.id # Pega o ID antes de deletar
+            folha_id_log = folha.id
             
             folha.delete()
             messages.success(request, f"Folha de ponto de '{servidor_nome}' para o período '{periodo}' excluída permanentemente.")
         registrar_log(request, 'DELETE_FOLHA_PERMANENTE', {
-                'servidor_nome': servidor_nome,
-                'folha_periodo': periodo,
-                'folha_id': folha_id_log,
-                'acao_por': 'Agente (Exclusão Permanente)'
-            })
+            'servidor_nome': servidor_nome,
+            'folha_periodo': periodo,
+            'folha_id': folha_id_log,
+            'acao_por': 'Agente (Exclusão Permanente)'
+        })
         return redirect('core:admin_historico_folhas', usuario_id=folha.servidor.id) 
     return render(request, 'core/admin_deletar_folha_permanente_confirm.html', {'folha': folha})
 
@@ -503,7 +484,6 @@ def deletar_folha_permanente_view(request, folha_id):
 def admin_auditoria_view(request):
     logs_list = LogAuditoria.objects.all()
 
-    # Filtros
     usuario_id = request.GET.get('usuario')
     acao = request.GET.get('acao')
     data_inicio = request.GET.get('data_inicio')
@@ -520,23 +500,19 @@ def admin_auditoria_view(request):
 
     logs_list = logs_list.order_by('-data_hora')
 
-    # Paginação
     page = request.GET.get('page', 1)
     paginator = Paginator(logs_list, 50) 
 
-    # Mapeamento dos logs para adicionar o atributo 'detalhes_json_str'
     logs_para_template = []
     for log_obj in logs_list:
         if log_obj.detalhes:
-            log_obj.detalhes_json_str = json.dumps(log_obj.detalhes, ensure_ascii=False) # Correção: usar log_obj.detalhes_json_str
+            log_obj.detalhes_json_str = json.dumps(log_obj.detalhes, ensure_ascii=False)
         else:
             log_obj.detalhes_json_str = "{}"
         logs_para_template.append(log_obj)
 
     try:
         logs_page_obj = paginator.page(page)
-        # Ajuste para garantir que object_list tenha o atributo 'detalhes_json_str'
-        # Isso é importante porque o paginator.page(page) retorna um novo queryset slice
         logs_page_obj.object_list = [l for l in logs_para_template if l.pk in [obj.pk for obj in logs_page_obj.object_list]]
         logs = logs_page_obj
     except PageNotAnInteger:
@@ -546,7 +522,6 @@ def admin_auditoria_view(request):
         logs = paginator.page(paginator.num_pages)
         logs.object_list = [l for l in logs_para_template if l.pk in [obj.pk for obj in logs.object_list]]
     
-    # Dados para os filtros do template
     usuarios_para_filtro = Usuario.objects.all().order_by('nome')
     acoes_disponiveis = LogAuditoria.objects.values_list('acao', flat=True).distinct().order_by('acao')
 

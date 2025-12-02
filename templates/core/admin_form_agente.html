@@ -1,4 +1,3 @@
-{# F:\dev\sigaf-novo\templates\core\admin_form_agente.html (MODIFICADO - Renderização manual de unidades_atuacao) #}
 {% extends 'base_adminlte.html' %}
 {% load static %}
 
@@ -9,7 +8,7 @@
 <style>
     /* Estilos para o contêiner de checkboxes */
     .small-checkbox-container .form-check {
-        margin-bottom: 0.2rem; /* Ajustado para 0.2rem, igual ao do delegado */
+        margin-bottom: 0.2rem; /* Espaçamento menor entre os itens */
         display: flex; /* Manter display flex para alinhar checkbox com label */
         align-items: center; /* Alinha verticalmente item dentro do flex */
         width: 100%; /* Ocupa a largura total da sua célula/coluna */
@@ -38,29 +37,7 @@
 
     /* Estilo para a célula/coluna que contém cada checkbox */
     .small-checkbox-item-col {
-        text-align: left !important; 
-    }
-
-    /* REMOVIDO: max-height e overflow-y para que a caixa de rolagem não seja forçada neste formulário.
-       Isso fará com que a lista se expanda completamente, como as outras, a menos que o conteúdo natural
-       do navegador (altura da tela) force o scroll da página inteira. */
-    /* .checkbox-scroll-area não terá mais max-height e overflow-y: auto; aqui */
-    .checkbox-scroll-area {
-        /* Se você ainda quiser alguma borda ou padding específico para esta área, mantenha aqui */
-        border: 1px solid #dee2e6; 
-        padding: 10px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        /* Remova as linhas abaixo para desativar o scroll forçado */
-        /* max-height: 250px; */
-        /* overflow-y: auto; */
-    }
-
-    /* Ajustar especificamente o font-size do label dentro da área de scroll para 0.6em */
-    .checkbox-scroll-area .form-check-label {
-        font-size: 0.6em; /* Mudar para 0.6em */
-        padding-left: 0.5em;
-        line-height: 1.2;
+        text-align: left !important;
     }
 </style>
 {% endblock %}
@@ -136,19 +113,33 @@
                         {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
                     </div>
                     
-                    {# AJUSTE AQUI para o campo 'ativo' - Renderização manual do checkbox #}
-                    {% if form.ativo %}
-                    <div class="form-group mb-3">
-                        <div class="form-check">
-                            <input type="checkbox" name="{{ form.ativo.name }}" id="{{ form.ativo.id_for_label }}" 
-                                   class="form-check-input" {% if form.ativo.value %}checked{% endif %}>
-                            <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
-                                {{ form.ativo.label }}
-                            </label>
-                            {% if form.ativo.errors %}<div class="text-danger small mt-1">{{ form.ativo.errors|first }}</div>{% endif %}
+                    {# BLCO CORRIGIDO: ATIVO E STATUS LADO A LADO #}
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            {% if form.ativo %}
+                            <div class="form-group mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="{{ form.ativo.name }}" id="{{ form.ativo.id_for_label }}" 
+                                           class="form-check-input" {% if form.ativo.value %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+                                        {{ form.ativo.label }}
+                                    </label>
+                                    {% if form.ativo.errors %}<div class="text-danger small mt-1">{{ form.ativo.errors|first }}</div>{% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                             {# Campo Status Servidor (Faltava este campo) #}
+                            {% if form.status_servidor %}
+                            <div class="form-group mb-3">
+                                <label for="{{ form.status_servidor.id_for_label }}" class="form-label">{{ form.status_servidor.label }}</label>
+                                {{ form.status_servidor }}
+                                {% if form.status_servidor.errors %}<div class="text-danger small mt-1">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                    {% endif %}
 
                 </div>
                 <div class="card-footer">
