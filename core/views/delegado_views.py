@@ -1,4 +1,5 @@
 # F:\dev\sigaf-novo\core\views\delegado_views.py
+# (COMPLETO E CORRIGIDO - Corrigido o redirecionamento após conferência da própria folha)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -43,11 +44,6 @@ def delegado_dashboard_view(request):
     """
     conferente_logado = request.user
    
-    # DEBUG: Informações do conferente logado
-    # print(f"\n--- DEBUG: delegado_dashboard_view ---")
-    # print(f"Usuário Logado: {conferente_logado.nome} ({conferente_logado.id_funcional}), Perfil: {conferente_logado.perfil}")
-    # print(f"Lotação do Usuário Logado: {conferente_logado.lotacao.nome_unidade if conferente_logado.lotacao else 'N/A'}")
-    
     # Lista de IDs das unidades que o usuário logado (Delegado/Servidor-Conferente) atua
     unidades_para_conferencia_ids = list(conferente_logado.unidades_atuacao.all().values_list('id', flat=True))
 
@@ -59,10 +55,7 @@ def delegado_dashboard_view(request):
     # Garante que não haja IDs duplicados
     unidades_para_conferencia_ids = list(set(unidades_para_conferencia_ids))
 
-    # print(f"Unidades para Conferência (IDs): {unidades_para_conferencia_ids}")
-    
     if not unidades_para_conferencia_ids:
-        # print("Nenhuma unidade de atuação atribuída ao conferente. Nenhuma folha para conferência.")
         messages.info(request, "Você não tem unidades atribuídas para conferência.")
         return render(request, 'core/delegado_dashboard.html', {'folhas_pendentes': []})
 
@@ -70,7 +63,6 @@ def delegado_dashboard_view(request):
     # Encontra folhas de ponto de servidores lotados nas unidades que o usuário logado atua,
     # que tenham status 'Em Andamento' E dias que ainda não foram conferidos.
     
-    # CORREÇÃO DA SINTAXE DO Q OBJECT - Usando & para AND lógico entre Q objects
     base_query = FolhaPonto.objects.filter(
         servidor__lotacao__id__in=unidades_para_conferencia_ids,
         status='Em Andamento', 
@@ -81,20 +73,10 @@ def delegado_dashboard_view(request):
         ~Q(dias__codigo__codigo__iexact='Livre') # OU se NÃO for 'Livre' (ou seja, é bloqueado por outra ocorrência)
     ).distinct()
 
-    # print(f"Base Query (Folhas em Andamento, dias 'Livre' assinados e não conferidos nas unidades de atuação): {base_query.count()} folhas")
-    # for f in base_query:
-    #     print(f"  - Folha: {f.servidor.nome} ({f.servidor.perfil}) - Lotação: {f.servidor.lotacao.nome_unidade}")
-
     # Aplicamos a lógica de exclusão: SOMENTE Administradores Gerais (que não têm folha no sistema)
-    # Agentes de Pessoal devem ter suas folhas conferidas, assim como Delegados e Servidores-Conferentes.
     folhas_pendentes = base_query.exclude(
         Q(servidor__perfil='Administrador Geral')
     ).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome', '-ano', '-trimestre')
-
-    # print(f"Folhas Pendentes APÓS exclusão (apenas Admin Geral excluído): {folhas_pendentes.count()} folhas")
-    # for f in folhas_pendentes:
-    #     print(f"  - FINAL - Folha: {f.servidor.nome} ({f.servidor.perfil}) - Lotação: {f.servidor.lotacao.nome_unidade}")
-    # print(f"--- FIM DEBUG: delegado_dashboard_view ---\n")
 
     context = {
         'folhas_pendentes': folhas_pendentes
@@ -112,11 +94,7 @@ def delegado_ver_folha_view(request, folha_id):
     
     conferente_logado = request.user
 
-    # A validação principal de acesso já é feita pelo @delegado_required.
-    # Se o usuário está aqui, ele é um Delegado ou Servidor-Conferente.
     # Permite acesso à folha de qualquer servidor do sistema.
-    # Se for uma folha de outro servidor, permite ver. Se for a própria folha, também.
-    # Apenas garante que o próprio usuário não está tentando acessar uma folha de outro tipo de perfil não coberto.
     if not (folha.servidor == conferente_logado or conferente_logado.perfil == 'Delegado de Polícia' or conferente_logado.is_conferente):
         messages.error(request, "Você não tem permissão para visualizar a folha de ponto deste servidor.")
         return redirect('core:delegado_dashboard')
@@ -169,12 +147,15 @@ def delegado_conferir_dia_view(request, dia_id):
     # Impede a conferência se o dia já foi conferido.
     if dia.delegado_conferiu:
         messages.warning(request, "Este dia já foi conferido.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
-    # NOVO: Lógica de validação da regra de negócio para a conferência de um dia "Livre"
-    # Só pode conferir se (NÃO é Livre) OU (é Livre E assinado)
+    # Lógica de validação da regra de negócio para a conferência de um dia "Livre"
     if dia.codigo.codigo.lower() == 'livre' and not dia.servidor_assinou:
         messages.error(request, "Não é possível conferir um dia 'Livre' que não foi assinado pelo servidor. Peça ao servidor para assinar primeiro.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
     dia.delegado_conferiu = True
@@ -185,6 +166,11 @@ def delegado_conferir_dia_view(request, dia_id):
     folha.update_status() # Atualiza o status da folha após a conferência do dia
 
     messages.success(request, f"Dia {dia.data_dia.strftime('%d/%m')} conferido com sucesso.")
+    
+    # CORREÇÃO AQUI: Se for a própria folha, volta para a Minha Folha
+    if folha.servidor == request.user:
+        return redirect('core:delegado_minha_folha')
+    
     return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
 
@@ -197,11 +183,15 @@ def delegado_desfazer_conferencia_view(request, dia_id):
     # Verifica se o usuário logado (Delegado/Servidor-Conferente) é quem realizou a conferência
     if dia.delegado != request.user:
         messages.error(request, "Você só pode desfazer suas próprias conferências.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
     # Verifica se o dia pertence a uma folha ativa (não arquivada)
     if folha.status == 'Arquivada':
         messages.error(request, "Não é possível desfazer conferência em folhas arquivadas.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
     dia.delegado_conferiu = False
@@ -212,6 +202,11 @@ def delegado_desfazer_conferencia_view(request, dia_id):
     folha.update_status() # Atualiza o status da folha
 
     messages.success(request, f"Conferência do dia {dia.data_dia.strftime('%d/%m')} desfeita.")
+    
+    # CORREÇÃO AQUI: Se for a própria folha, volta para a Minha Folha
+    if folha.servidor == request.user:
+        return redirect('core:delegado_minha_folha')
+        
     return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
 @require_POST 
@@ -221,7 +216,6 @@ def delegado_conferir_mes_view(request, folha_id, mes_num):
     conferente_logado = request.user
 
     # Permite a conferência em lote de qualquer folha, desde que o usuário seja um conferente.
-    # A validação principal de acesso já é feita pelo @delegado_required.
     if not (conferente_logado.perfil == 'Delegado de Polícia' or conferente_logado.is_conferente):
         messages.error(request, "Você não tem permissão para conferir esta folha de ponto em lote.")
         return redirect('core:delegado_dashboard')
@@ -229,6 +223,8 @@ def delegado_conferir_mes_view(request, folha_id, mes_num):
     # Se a folha estiver arquivada, não permite conferir.
     if folha.status == 'Arquivada':
         messages.error(request, "Esta folha de ponto está arquivada e não pode ser conferida em lote.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
     num_dias_no_mes = calendar.monthrange(folha.ano, mes_num)[1]
@@ -238,6 +234,7 @@ def delegado_conferir_mes_view(request, folha_id, mes_num):
         data_dia_completa = date(folha.ano, mes_num, dia_num)
         try:
             dia = DiaPonto.objects.get(folha=folha, data_dia=data_dia_completa)
+        
             # Confere apenas se o dia NÃO foi conferido ainda E se atende à nova regra de negócio:
             # - É um dia "Livre" E assinado pelo servidor, OU
             # - Não é um dia "Livre" (ou seja, é bloqueado por outra ocorrência)
@@ -249,13 +246,17 @@ def delegado_conferir_mes_view(request, folha_id, mes_num):
                 dias_conferidos_count += 1
         except DiaPonto.DoesNotExist:
             pass 
-    
+  
     folha.update_status()
 
     if dias_conferidos_count > 0:
         messages.success(request, f"{dias_conferidos_count} dia(s) do mês foram conferidos com sucesso.")
     else:
         messages.info(request, "Nenhum dia que atenda aos critérios de conferência (bloqueado ou livre e assinado) foi encontrado para este mês.")
+
+    # CORREÇÃO AQUI: Se for a própria folha, volta para a Minha Folha
+    if folha.servidor == request.user:
+        return redirect('core:delegado_minha_folha')
 
     return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
@@ -268,6 +269,8 @@ def desfazer_conferencia_mes_view(request, folha_id, mes_num):
     # Se a folha estiver arquivada, não permite desfazer conferência.
     if folha.status == 'Arquivada':
         messages.error(request, "Esta folha de ponto está arquivada e a conferência não pode ser desfeita em lote.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
     dias_desfeitos_count = 0
@@ -286,6 +289,10 @@ def desfazer_conferencia_mes_view(request, folha_id, mes_num):
     else:
         messages.info(request, "Nenhuma conferência sua encontrada para desfazer neste mês.")
 
+    # CORREÇÃO AQUI: Se for a própria folha, volta para a Minha Folha
+    if folha.servidor == request.user:
+        return redirect('core:delegado_minha_folha')
+
     return redirect('core:delegado_ver_folha', folha_id=folha.id)
 
 
@@ -302,9 +309,6 @@ def delegado_busca_view(request):
     search_performed = False
 
     conferente_logado = request.user
-
-    # Removida a construção de 'unidades_para_conferencia_ids' pois não é mais usada para filtrar acesso aqui.
-    # O acesso será irrestrito para quem pode usar a busca (delegado_required).
 
     if search_query:
         search_performed = True
@@ -347,8 +351,6 @@ def delegado_minha_folha_view(request):
     A lógica é muito similar à dashboard do servidor, e pode ter botões de conferência para si mesmo.
     """
     conferente_ou_delegado = request.user
-    hoje = date.today()
-    trimestre_atual = (hoje.month - 1) // 3 + 1
     
     # Busca todas as folhas do próprio usuário (Delegado/Servidor-Conferente)
     folhas_do_usuario = FolhaPonto.objects.filter(
