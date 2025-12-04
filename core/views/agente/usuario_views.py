@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\views\agente\usuario_views.py (CORRIGIDO - Perfis atualizados e gestão de conferentes)
+# F:\dev\sigaf-novo\core\views\agente\usuario_views.py (CORRIGIDO - Erro 405)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -47,16 +47,12 @@ def editar_usuario_view(request, usuario_id):
 
     # Permissão: Um agente só pode editar usuários lotados em suas unidades de atuação.
     # Ele pode editar a si mesmo (se for Agente de Pessoal).
-    # MODIFICAÇÃO: Remove a restrição de edição para 'Delegado de Polícia'.
-    # O Agente de Pessoal NÃO pode editar Administradores Gerais.
     if not ((usuario.lotacao and usuario.lotacao in request.user.unidades_atuacao.all()) or usuario == request.user) or \
        usuario.perfil == 'Administrador Geral': 
         messages.error(request, 'Você não tem permissão para editar este usuário.')
         return redirect('core:agente_dashboard')
 
-    # Se o usuário a ser editado é um Agente de Pessoal (mas não é o próprio agente logado),
-    # o agente logado não pode editar, pois a gestão de agentes é no Admin Geral.
-    # Esta é uma regra interna para evitar que Agentes gerenciem outros Agentes (exceto a si mesmos).
+    # Se o usuário a ser editado é um Agente de Pessoal (mas não é o próprio agente logado)
     if usuario.perfil == 'Agente de Pessoal' and usuario != request.user:
         messages.error(request, 'Você não pode editar outros Agentes de Pessoal por esta interface. Utilize o painel de Administrador Geral.')
         return redirect('core:agente_dashboard')
@@ -67,7 +63,6 @@ def editar_usuario_view(request, usuario_id):
             mudancas = {k: {'old': str(form.initial.get(k)), 'new': str(form.cleaned_data.get(k))} 
                         for k, v in form.cleaned_data.items() if str(form.cleaned_data.get(k)) != str(form.initial.get(k))}
             
-            # Captura unidades de atuação antigas para o log ANTES de salvar o form
             unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True)) 
 
             if 'status_servidor' in mudancas:
@@ -80,30 +75,26 @@ def editar_usuario_view(request, usuario_id):
                     usuario.data_inativacao = None
                     messages.info(request, f"O usuário {usuario.nome} foi automaticamente reativado e a data de inativação removida.")
 
-            # ATENÇÃO: A alteração de perfil para 'Conferente' NÃO deve ser feita aqui se a atribuição é via unidades_atuacao
-            # O perfil principal (ex: Investigador Policial) deve permanecer.
             # O `is_staff` deve ser False para cargos policiais ou conferentes.
             if usuario.perfil in [cargo[0] for cargo in Usuario.POLICIA_CARGOS]:
-                if usuario.is_staff: # Garante que não tenha is_staff para perfis comuns
+                if usuario.is_staff: 
                     usuario.is_staff = False
                     usuario.save(update_fields=['is_staff'])
 
             usuario = form.save() 
-            # UserChangeForm já cuida de salvar as relações ManyToMany (unidades_atuacao) em seu próprio método save()
-
-            # Captura unidades de atuação novas para o log DEPOIS de salvar
+            
             unidades_atuacao_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
-            mudancas_unidades_atuacao = {} # Inicializa o dicionário vazio
+            mudancas_unidades_atuacao = {} 
             if unidades_atuacao_antigas_ids != unidades_atuacao_novas_ids:
                 unidades_adicionadas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_novas_ids - unidades_atuacao_antigas_ids)]
                 unidades_removidas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_antigas_ids - unidades_atuacao_novas_ids)]
                 mudancas_unidades_atuacao = {
                     'adicionadas': unidades_adicionadas,
-                    'removidas': unidades_removidas # <-- Corrigido aqui para usar 'unidades_removidas'
+                    'removidas': unidades_removidas 
                 }
             
-            if mudancas or mudancas_unidades_atuacao: # Loga se houver mudanças em campos normais ou em unidades de atuação
+            if mudancas or mudancas_unidades_atuacao: 
                 registrar_log(request, 'USER_EDIT_BY_AGENTE', {
                     'usuario_id': usuario.id,
                     'usuario_nome': usuario.nome,
@@ -116,14 +107,12 @@ def editar_usuario_view(request, usuario_id):
         form = UsuarioChangeForm(instance=usuario, request=request) 
     return render(request, 'core/agente_form_usuario.html', {'form': form, 'titulo': f'Editando: {usuario.nome}'})
 
+# ATENÇÃO: @require_POST removido desta view para permitir que o fluxo GET mostre a página de confirmação
 @agente_required
-@require_POST 
 def inativar_usuario_view(request, usuario_id): 
     usuario = get_object_or_404(Usuario, id=usuario_id)
 
-    # Permissão: Um agente só pode inativar usuários lotados em suas unidades de atuação.
-    # Não pode inativar a si mesmo.
-    # E não pode inativar Agentes de Pessoal, Administradores Gerais ou Delegados.
+    # Permissão
     if (usuario == request.user) or \
        usuario.perfil in ['Agente de Pessoal', 'Administrador Geral', 'Delegado de Polícia'] or \
        (usuario.lotacao and usuario.lotacao not in request.user.unidades_atuacao.all()):
@@ -147,15 +136,14 @@ def inativar_usuario_view(request, usuario_id):
             messages.info(request, f'O usuário "{usuario.nome}" já está inativo.')
         return redirect('core:agente_dashboard')
         
-    return render(request, 'core/agente_deletar_usuario_confirm.html', {'usuario': usuario}) # Renomeado para inativar
+    return render(request, 'core/agente_deletar_usuario_confirm.html', {'usuario': usuario}) 
 
 @agente_required
 def transferir_usuario_view(request, usuario_id):
     usuario_a_transferir = get_object_or_404(Usuario, id=usuario_id)
     unidade_origem = usuario_a_transferir.lotacao
 
-    # Permissão: O agente só pode transferir usuários de suas próprias unidades de atuação.
-    # E não pode transferir Agentes de Pessoal, Administradores Gerais ou Delegados.
+    # Permissão
     if not (unidade_origem and unidade_origem in request.user.unidades_atuacao.all()) or \
        usuario_a_transferir.perfil in ['Agente de Pessoal', 'Administrador Geral', 'Delegado de Polícia']:
         messages.error(request, "Você não tem permissão para transferir este usuário.")
@@ -234,7 +222,6 @@ def listar_inativos_view(request):
             Q(id_funcional__icontains=search_query)
         )
     
-    # Agrupar por lotação para exibição organizada
     inativos_por_lotacao = {}
     for unidade in unidades_atuacao.order_by('nome_unidade'): 
         servidores_na_unidade = servidores_inativos_queryset.filter(lotacao=unidade).order_by('nome')
@@ -252,8 +239,7 @@ def listar_inativos_view(request):
 def reativar_usuario_view(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id, ativo=False)
     
-    # Permissão: Um agente só pode reativar usuários lotados em suas unidades de atuação.
-    # E não pode reativar Agentes de Pessoal, Administradores Gerais ou Delegados.
+    # Permissão
     if (usuario.lotacao and usuario.lotacao not in request.user.unidades_atuacao.all()) or \
        usuario.perfil in ['Agente de Pessoal', 'Administrador Geral', 'Delegado de Polícia']:
         messages.error(request, "Você não tem permissão para reativar este usuário.")
@@ -273,31 +259,26 @@ def reativar_usuario_view(request, usuario_id):
     messages.success(request, f"O usuário {usuario.nome} foi reativado com sucesso. Status definido como '{usuario.status_servidor}'.")
     return redirect('core:listar_inativos')
 
-# NOVO: Views para Atribuição de Conferentes (Agente de Pessoal)
+# Views para Atribuição de Conferentes (Agente de Pessoal)
 @agente_required
 def listar_conferentes_view(request):
     agente = request.user
-    # Busca usuários que são "Delegado de Polícia" OU "Servidores-Conferentes" nas unidades que o agente atua.
-    # Um "Servidor-Conferente" é qualquer usuário com cargo policial que tem unidades_atuacao atribuídas.
+    
     conferentes_queryset = Usuario.objects.filter(
         Q(perfil='Delegado de Polícia') | 
-        Q(unidades_atuacao__isnull=False) # Qualquer um com unidades_atuacao preenchidas
+        Q(unidades_atuacao__isnull=False) 
     ).exclude(
         Q(perfil='Administrador Geral') | Q(perfil='Agente de Pessoal')
     ).filter(
-        Q(lotacao__in=agente.unidades_atuacao.all()) | Q(unidades_atuacao__in=agente.unidades_atuacao.all()) # Garante que pertença às unidades de atuação do agente
+        Q(lotacao__in=agente.unidades_atuacao.all()) | Q(unidades_atuacao__in=agente.unidades_atuacao.all())
     ).distinct().order_by('nome')
 
 
-    # Lista de todos os usuários (servidores comuns) que podem ser atribuídos como conferentes.
-    # Exclui perfis que já têm poder de conferência/administração por natureza (Admin, Agente, Delegado).
-    # E filtra apenas os ativos e nas unidades de atuação do agente.
-    # Importante: Exclui aqueles que JÁ SÃO conferentes (possuem unidades_atuacao) para evitar que apareçam para "Atribuir" novamente.
     usuarios_candidatos_conferente = Usuario.objects.filter(
         lotacao__in=agente.unidades_atuacao.all(),
         ativo=True
     ).exclude(
-        Q(perfil='Administrador Geral') | Q(perfil='Agente de Pessoal') | Q(perfil='Delegado de Polícia') | Q(unidades_atuacao__isnull=False) # Exclui quem já é conferente
+        Q(perfil='Administrador Geral') | Q(perfil='Agente de Pessoal') | Q(perfil='Delegado de Polícia') | Q(unidades_atuacao__isnull=False) 
     ).order_by('nome')
 
 
@@ -313,26 +294,18 @@ def atribuir_conferente_view(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     agente = request.user
 
-    # Permissão: O agente pode atribuir conferência para usuários em suas unidades de atuação.
-    # Não pode atribuir a si mesmo ou a usuários que já são admin/agente/delegado.
     if not (usuario.lotacao and usuario.lotacao in agente.unidades_atuacao.all()) or \
        usuario.perfil in ['Administrador Geral', 'Agente de Pessoal', 'Delegado de Polícia']:
         messages.error(request, "Você não tem permissão para atribuir conferência a este usuário.")
         return redirect('core:listar_conferentes')
 
     if request.method == 'POST':
-        # Instancia o formulário com a instância do usuário para carregar as unidades de atuação existentes
         form = AtribuirConferenteForm(request.POST, instance=usuario) 
         if form.is_valid():
-            # Captura as unidades antes de salvar para o log
             unidades_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
             
-            # Aqui, o perfil primário do usuário não é alterado!
-            # A atribuição de conferência é feita apenas pelas unidades_atuacao.
+            form.save() 
             
-            form.save() # form.save() já cuida do ManyToManyField
-            
-            # Captura as unidades depois de salvar para o log
             unidades_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
             mudancas_unidades = {}
@@ -344,7 +317,6 @@ def atribuir_conferente_view(request, usuario_id):
                     'removidas': unidades_removidas
                 }
             
-            # Registrar log
             registrar_log(request, 'CONFERENTE_ATRIBUIDO', {
                 'usuario_conferente_id': usuario.id,
                 'usuario_conferente_nome': usuario.nome,
@@ -372,25 +344,18 @@ def remover_conferente_view(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     agente = request.user
 
-    # Permissão: Agente só pode remover atribuições de conferência para usuários
-    # que ele pode gerenciar (em suas unidades de atuação).
-    # Não pode remover Delegados (que não são atribuídos aqui), nem Admin Geral.
-    # O usuário pode ser um Conferente (pelas unidades_atuacao) ou um Delegado.
     if not (usuario.lotacao and usuario.lotacao in agente.unidades_atuacao.all()) or \
-        usuario.perfil in ['Administrador Geral', 'Agente de Pessoal', 'Delegado de Polícia']: # Delegado não pode ser removido daqui
+        usuario.perfil in ['Administrador Geral', 'Agente de Pessoal', 'Delegado de Polícia']: 
         messages.error(request, "Você não tem permissão para remover o status de Conferente deste usuário.")
         return redirect('core:listar_conferentes')
 
-    # Se o usuário tem unidades de atuação, consideramos que ele é um "Conferente" e podemos remover
     if usuario.unidades_atuacao.exists():
-        usuario_nome = usuario.nome # Para log
+        usuario_nome = usuario.nome 
         unidades_atuacao_removidas = list(usuario.unidades_atuacao.all().values_list('nome_unidade', flat=True))
 
-        usuario.unidades_atuacao.clear() # Remove todas as unidades de atuação de conferência
-        # O perfil principal não é alterado, permanece o cargo policial original.
+        usuario.unidades_atuacao.clear() 
         usuario.save()
 
-        # Registrar log
         registrar_log(request, 'CONFERENTE_REMOVIDO', {
             'usuario_conferente_id': usuario.id,
             'usuario_conferente_nome': usuario_nome,

@@ -1,4 +1,4 @@
-# ARQUIVO: core/views/agente/folha_ponto_views.py (COMPLETO E MODIFICADO)
+# ARQUIVO: core/views/agente/folha_ponto_views.py (CORRIGIDO - Erro 405)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -35,10 +35,6 @@ def gerenciar_ponto_view(request, folha_id):
     servidor = folha_ponto.servidor
 
     # Lógica de permissão para gerenciar a folha:
-    # 1. Se o usuário logado é Administrador Geral, ele pode gerenciar qualquer folha.
-    # 2. Se o usuário logado é Agente de Pessoal:
-    #    a. Ele pode gerenciar a própria folha.
-    #    b. Ele pode gerenciar a folha de um servidor cuja lotação esteja entre suas unidades de atuação.
     if request.user.perfil == 'Administrador Geral':
         pass # Admin Geral tem acesso total
     elif request.user.perfil == 'Agente de Pessoal':
@@ -54,7 +50,7 @@ def gerenciar_ponto_view(request, folha_id):
     if folha_ponto.status == 'Arquivada':
         messages.warning(request, "Esta folha de ponto está arquivada e não pode ser editada.")
         
-    # Garante que os dias sejam populados se não existirem, ou sejam recuperados.
+    # Garante que os dias sejam populados se não existirem
     if not folha_ponto.dias.exists():
         dias_criados = popular_dias_folha(folha_ponto)
         if dias_criados:
@@ -62,8 +58,7 @@ def gerenciar_ponto_view(request, folha_id):
         else:
             messages.error(request, f"Erro ao popular dias para a folha de {servidor.nome}. Nenhuma ocorrência padrão (Livre, SÁBADO, DOMINGO) encontrada?")
         
-    meses_preparados = preparar_dados_para_web(folha_ponto) # Sempre chama para pegar os dados atualizados
-
+    meses_preparados = preparar_dados_para_web(folha_ponto)
 
     # Ordena por código para a exibição no dropdown
     codigos_ocorrencia = CodigoOcorrencia.objects.all().order_by('codigo') 
@@ -84,26 +79,22 @@ def agente_minha_folha_view(request):
     View dedicada para "Minha Folha de Ponto" do Agente de Pessoal.
     Redireciona para o dashboard principal onde a própria folha é exibida.
     """
-    return redirect('core:dashboard') # Redireciona para a tela de assinatura para a própria folha do agente.
+    return redirect('core:dashboard') 
 
-@login_required # Mantém este login_required pois é acessada por Admin Geral também.
+@login_required 
 def agente_historico_folhas_view(request, usuario_id):
     """
     Exibe todas as folhas de ponto de um usuário específico.
-    Acessível por Admin Geral (qualquer usuário) e Agente de Pessoal (usuários em suas unidades de atuação).
+    Acessível por Admin Geral e Agente de Pessoal.
     """
     servidor = get_object_or_404(Usuario, id=usuario_id)
 
-    # Lógica de permissão:
-    # 1. Se o usuário logado é o próprio servidor, pode ver.
-    # 2. Se o usuário logado é Agente de Pessoal e o servidor está em uma de suas unidades de atuação.
-    # 3. Se o usuário logado é Administrador Geral.
-    # 4. Outros perfis não têm permissão para ver histórico de outros usuários.
+    # Lógica de permissão
     if not (request.user.pk == servidor.pk or \
             (request.user.perfil == 'Agente de Pessoal' and servidor.lotacao and servidor.lotacao in request.user.unidades_atuacao.all()) or \
             request.user.perfil == 'Administrador Geral'):
         messages.error(request, "Você não tem permissão para acessar o histórico de folhas deste servidor.")
-        return redirect('core:dashboard') # Redireciona para o dashboard padrão
+        return redirect('core:dashboard') 
 
     # Filtra as folhas de ponto ativas e arquivadas
     folhas = FolhaPonto.objects.filter(servidor=servidor).order_by('-ano', '-trimestre')
@@ -119,7 +110,7 @@ def agente_historico_folhas_view(request, usuario_id):
 @agente_required
 def bloquear_dia_view(request):
     """
-    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência a um dia específico da folha.
+    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência a um dia específico.
     """
     dia_id = request.POST.get('dia_id')
     folha_id = request.POST.get('folha_id')
@@ -128,14 +119,12 @@ def bloquear_dia_view(request):
     dia = get_object_or_404(DiaPonto, id=dia_id)
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão para o agente (e admin geral)
-    # Se a folha.servidor.lotacao estiver dentro das unidades de atuação do agente
+    # Permissão 
     if not (request.user.perfil == 'Administrador Geral' or 
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para alterar este dia de ponto.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
 
-    # Se a folha estiver arquivada, não permite edição.
     if folha.status == 'Arquivada':
         messages.error(request, "Esta folha de ponto está arquivada e não pode ser editada.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
@@ -178,18 +167,16 @@ def bloquear_dia_view(request):
 @require_POST
 def bloquear_dias_em_lote_view(request, folha_id):
     """
-    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência em lote a vários dias da folha.
+    Permite ao Agente de Pessoal (ou Admin Geral) aplicar uma ocorrência em lote.
     """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
     
-    # Permissão para o agente (e admin geral)
-    # Se a folha.servidor.lotacao estiver dentro das unidades de atuação do agente
+    # Permissão
     if not (request.user.perfil == 'Administrador Geral' or 
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para alterar esta folha de ponto em lote.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
     
-    # Se a folha estiver arquivada, não permite edição.
     if folha.status == 'Arquivada':
         messages.error(request, "Esta folha de ponto está arquivada e não pode ser editada em lote.")
         return redirect('core:gerenciar_ponto', folha_id=folha_id)
@@ -207,11 +194,10 @@ def bloquear_dias_em_lote_view(request, folha_id):
             folha=folha,
             data_dia__gte=data_inicio_lote,
             data_dia__lte=data_fim_lote
-        ).exclude(codigo=codigo_lote) # Evita alterar dias que já têm o mesmo código
+        ).exclude(codigo=codigo_lote) 
 
         with transaction.atomic():
             for dia in dias_para_alterar:
-                # Armazena o estado antigo para o log
                 old_codigo_denominacao = dia.codigo.denominacao
                 old_servidor_assinou = dia.servidor_assinou
                 old_delegado_conferiu = dia.delegado_conferiu
@@ -259,14 +245,12 @@ def bloquear_dias_em_lote_view(request, folha_id):
 @agente_required
 def agente_criar_folha_view(request):
     """
-    Permite ao Agente de Pessoal criar uma nova folha de ponto manualmente para um servidor.
+    Permite ao Agente de Pessoal criar uma nova folha de ponto manualmente.
     """
-    # Pré-selecionar o servidor se um usuario_id for passado na URL (útil ao clicar de um histórico)
     initial_servidor = request.GET.get('usuario_id')
     initial_data = {}
     if initial_servidor:
         try:
-            # Garante que o usuário que está sendo preenchido pertença à unidade gerenciada pelo agente
             servidor_obj = Usuario.objects.get(id=initial_servidor, lotacao__in=request.user.unidades_atuacao.all())
             initial_data['servidor'] = servidor_obj
         except Usuario.DoesNotExist:
@@ -276,26 +260,24 @@ def agente_criar_folha_view(request):
         form = CriarFolhaManualForm(request.POST, user=request.user)
         if form.is_valid():
             folha = form.save(commit=False)
-            folha.unidade_id_geracao = folha.servidor.lotacao # Atribui a unidade de lotação atual do servidor
+            folha.unidade_id_geracao = folha.servidor.lotacao 
 
             try:
                 with transaction.atomic():
                     folha.save()
-                    popular_dias_folha(folha) # Popula os dias automaticamente
+                    popular_dias_folha(folha)
                     messages.success(request, f"Folha de ponto para {folha.servidor.nome} no {folha.trimestre}º trimestre de {folha.ano} criada com sucesso!")
                     
-                    # Registrar log
                     registrar_log(request, 'CRIAR_FOLHA_MANUAL', {
                         'servidor_id_funcional': folha.servidor.id_funcional,
                         'trimestre': folha.trimestre,
                         'ano': folha.ano,
-                        'unidade_geracao': folha.unidade_id_geracao.nome_unidade,
+                        'unidade_geracao': folha.unidade_id_geracao.nome_unidade if folha.unidade_id_geracao else 'N/A',
                         'motivo': 'Criação Manual por Agente'
                     })
                     return redirect('core:gerenciar_ponto', folha_id=folha.id)
             except Exception as e:
                 messages.error(request, f"Erro ao criar folha de ponto: {e}")
-                
         else:
             messages.error(request, "Erro ao criar folha de ponto. Verifique os dados informados.")
     else:
@@ -303,9 +285,8 @@ def agente_criar_folha_view(request):
     
     return render(request, 'core/agente_criar_folha.html', {'form': form})
 
-
+# ATENÇÃO: @require_POST removido desta view para permitir que o fluxo GET mostre a página de confirmação
 @agente_required
-@require_POST
 def agente_deletar_folha_view(request, folha_id):
     """
     Permite ao Agente de Pessoal (ou Admin Geral) excluir permanentemente uma folha de ponto.
@@ -313,8 +294,7 @@ def agente_deletar_folha_view(request, folha_id):
     """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
-    # ou Administradores Gerais
+    # Permissão
     if not (request.user.perfil == 'Administrador Geral' or 
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para realizar esta ação.")
@@ -325,9 +305,11 @@ def agente_deletar_folha_view(request, folha_id):
         with transaction.atomic():
             servidor_nome = folha.servidor.nome
             periodo = f"{folha.get_trimestre_display()} de {folha.ano}"
-            folha_id_log = folha.id # Pega o ID antes de deletar
+            folha_id_log = folha.id
+            servidor_id = folha.servidor.id # Salva o ID para redirecionar
             
             folha.delete()
+            
             messages.success(request, f"Folha de ponto de '{servidor_nome}' para o período '{periodo}' excluída permanentemente.")
             
             registrar_log(request, 'DELETE_FOLHA_PERMANENTE', {
@@ -336,7 +318,7 @@ def agente_deletar_folha_view(request, folha_id):
                 'folha_id': folha_id_log,
                 'acao_por': 'Agente (Exclusão Permanente)'
             })
-            return redirect('core:agente_historico_folhas', usuario_id=folha.servidor.id)
+            return redirect('core:agente_historico_folhas', usuario_id=servidor_id)
             
     # Para o GET request (exibir a página de confirmação)
     context = {
@@ -350,12 +332,10 @@ def agente_deletar_folha_view(request, folha_id):
 def arquivar_folha_view(request, folha_id):
     """
     Permite ao Agente de Pessoal (ou Admin Geral) arquivar uma folha de ponto.
-    Uma folha arquivada não pode ser editada até ser desarquivada.
     """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
-    # ou Administradores Gerais
+    # Permissão
     if not (request.user.perfil == 'Administrador Geral' or 
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para arquivar esta folha.")
@@ -368,7 +348,7 @@ def arquivar_folha_view(request, folha_id):
         messages.warning(request, f"A folha de {folha.servidor.nome} - {folha.get_trimestre_display()} de {folha.ano} não pode ser arquivada porque não está com status 'Concluída'.")
     else:
         folha.status = 'Arquivada'
-        folha.ativa = False # Torna a folha inativa para não aparecer nos dashboards normais
+        folha.ativa = False
         folha.save()
         messages.success(request, f"Folha de {folha.servidor.nome} - {folha.get_trimestre_display()} de {folha.ano} arquivada com sucesso!")
         registrar_log(request, 'ARQUIVAR_FOLHA', {
@@ -377,7 +357,7 @@ def arquivar_folha_view(request, folha_id):
             'periodo': f"{folha.get_trimestre_display()} de {folha.ano}"
         })
     
-    next_url = request.POST.get('next', 'core:agente_dashboard') # Redireciona para onde veio
+    next_url = request.POST.get('next', 'core:agente_dashboard') 
     return redirect(next_url)
 
 @agente_required
@@ -388,8 +368,7 @@ def desarquivar_folha_view(request, folha_id):
     """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão: Somente Agentes de Pessoal que gerenciam a unidade do servidor
-    # ou Administradores Gerais
+    # Permissão
     if not (request.user.perfil == 'Administrador Geral' or 
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all())):
         messages.error(request, "Você não tem permissão para desarquivar esta folha.")
@@ -398,8 +377,7 @@ def desarquivar_folha_view(request, folha_id):
     if folha.status != 'Arquivada':
         messages.info(request, f"A folha de {folha.servidor.nome} - {folha.get_trimestre_display()} de {folha.ano} não está arquivada.")
     else:
-        # Ao desarquivar, volta para 'Em Andamento' (ou 'Concluída' se todos os dias estiverem ok)
-        # O safest é 'Em Andamento' para permitir re-conferência ou ajustes.
+        # Ao desarquivar, volta para 'Em Andamento'
         folha.status = 'Em Andamento'
         folha.ativa = True
         folha.save()
@@ -421,8 +399,6 @@ def arquivar_lote_view(request):
     """
     agente = request.user
     
-    # Busca todas as folhas CONCLUÍDAS nas unidades de atuação do agente
-    # Exclui folhas de Delegados e Administradores Gerais
     folhas_concluidas = FolhaPonto.objects.filter(
         servidor__lotacao__in=agente.unidades_atuacao.all(),
         status='Concluída'
@@ -439,7 +415,7 @@ def arquivar_lote_view(request):
 
     with transaction.atomic():
         for folha in folhas_concluidas:
-            if folha.status == 'Concluída': # Garante que só concluídas sejam arquivadas
+            if folha.status == 'Concluída': 
                 folha.status = 'Arquivada'
                 folha.ativa = False
                 folha.save()
@@ -458,7 +434,7 @@ def arquivar_lote_view(request):
             'folhas_arquivadas': folhas_arquivadas_detalhes,
         })
     else:
-        messages.info(request, "Nenhuma folha nova foi arquivada em lote. Verifique se há folhas concluídas disponíveis.")
+        messages.info(request, "Nenhuma folha nova foi arquivada em lote.")
 
     return redirect('core:agente_dashboard')
 
@@ -470,13 +446,11 @@ def folhas_arquivadas_view(request):
     """
     agente = request.user
 
-    # Filtra as folhas arquivadas dos servidores que estão lotados nas unidades de atuação do agente.
     folhas_arquivadas_queryset = FolhaPonto.objects.filter(
-        servidor__lotacao__in=agente.unidades_atuacao.all(), # Filtra pelas unidades de atuação do agente
+        servidor__lotacao__in=agente.unidades_atuacao.all(),
         status='Arquivada'
     ).select_related('servidor', 'unidade_id_geracao').order_by('-ano', '-trimestre', 'servidor__nome')
 
-    # Agrupa as folhas por ano e trimestre para exibição
     folhas_por_ano = {}
     for folha in folhas_arquivadas_queryset:
         if folha.ano not in folhas_por_ano:
@@ -488,26 +462,22 @@ def folhas_arquivadas_view(request):
         
         folhas_por_ano[folha.ano][trimestre_display].append(folha)
 
-    # Ordena os anos em ordem decrescente
     folhas_por_ano_ordenado = sorted(folhas_por_ano.items(), key=lambda item: item[0], reverse=True)
 
     context = {
-        'folhas_por_ano_ordenado': folhas_por_ano_ordenado # Passa a lista ordenada para o template
+        'folhas_por_ano_ordenado': folhas_por_ano_ordenado 
     }
     return render(request, 'core/folhas_arquivadas.html', context)
 
 @require_POST
-@agente_required # Ou admin_required, se admin geral também puder salvar
+@agente_required 
 def salvar_observacoes_folha_view(request, folha_id):
     """
     Permite ao Agente de Pessoal (ou Admin Geral) salvar observações em uma folha de ponto.
     """
     folha = get_object_or_404(FolhaPonto, id=folha_id)
 
-    # Permissão:
-    # 1. Se o usuário logado é Administrador Geral.
-    # 2. Se o usuário logado é Agente de Pessoal e a lotação do servidor da folha está entre as unidades de atuação do agente.
-    # 3. Se o usuário logado é o próprio servidor da folha e não é Delegado de Polícia nem Administrador Geral (outros podem ver, mas não editar).
+    # Permissão
     if not (request.user.perfil == 'Administrador Geral' or
             (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao and folha.servidor.lotacao in request.user.unidades_atuacao.all()) or
             (request.user.pk == folha.servidor.pk and request.user.perfil not in ['Delegado de Polícia', 'Administrador Geral'])
@@ -521,7 +491,6 @@ def salvar_observacoes_folha_view(request, folha_id):
 
     observacoes_novas = request.POST.get('observacoes', '').strip()
     
-    # Armazena o valor antigo para o log de auditoria
     observacoes_antigas = folha.observacoes if folha.observacoes else ""
 
     if observacoes_novas != observacoes_antigas:
@@ -529,7 +498,6 @@ def salvar_observacoes_folha_view(request, folha_id):
         folha.save(update_fields=['observacoes'])
         messages.success(request, "Observações salvas com sucesso!")
 
-        # Registrar log de auditoria se houver mudança
         detalhes_log = {
             'folha_id': folha.id,
             'servidor_id_funcional': folha.servidor.id_funcional,
