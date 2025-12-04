@@ -14,7 +14,8 @@
 
 <form method="post">
     {% csrf_token %}
-    <a href="{% url 'agente_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+    {# CORREÇÃO AQUI: Adicionado 'core:' antes de 'agente_dashboard' #}
+    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">Cancelar</a>
     <button type="submit" class="btn btn-danger">Sim, Inativar Usuário</button>
 </form>
 {% endblock %}
