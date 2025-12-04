@@ -1,6 +1,6 @@
 import calendar
 from datetime import date
-from .models import DiaPonto, CodigoOcorrencia, LogAuditoria, FolhaPonto
+from .models import DiaPonto, CodigoOcorrencia, LogAuditoria, FolhaPonto, Usuario
 
 MESES_PT_BR = {
     1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
@@ -98,41 +98,40 @@ ACOES_DE_AUDITORIA_ESSENCIAIS = [
     'DELETAR_FOLHA',                  # Exclusão (não permanente) de folha por agente
     'PASSWORD_CHANGE_SUCCESS',        # Troca de senha
     'CRIAR_FOLHA_MANUAL',             # Criação manual de folha por agente
-    # As ações abaixo foram removidas para tornar o log mais restritivo
-    # 'LOGIN_FAILURE',
-    # 'FIRST_LOGIN_REDIRECT',
-    # 'USER_CREATE_BY_AGENTE',
-    # 'USER_CREATE_BY_ADMIN',
-    # 'USER_EDIT_BY_AGENTE',
-    # 'USER_EDIT_BY_ADMIN',
-    # 'USER_INACTIVATE_BY_AGENTE',
-    # 'USER_REACTIVATE_BY_AGENTE',
-    # 'BLOQUEIO_DIA',
-    # 'BLOQUEIO_LOTE',
-    # 'ARQUIVAR_FOLHA',
-    # 'DESARQUIVAR_FOLHA',
-    # 'ARQUIVAR_FOLHA_LOTE',
-    # 'LOGOUT',
-    # 'LOGIN_SUCCESS',
-    # 'UNIDADE_ATIVADA',
-    # 'UNIDADE_INATIVADA',
-    # 'AGENTE_ATIVADO',
-    # 'AGENTE_INATIVADO',
-    # 'USUARIO_ATIVADO',
-    # 'USUARIO_INATIVADO',
-    # 'UNIDADE_CRIADA', # Nova adição para registro de criação de unidade
-    # 'UNIDADE_EDITADA', # Nova adição para registro de edição de unidade
-    # 'AGENTE_CRIADO', # Nova adição para registro de criação de agente
-    # 'AGENTE_EDITADO', # Nova adição para registro de edição de agente
-    # 'USER_EDIT_BY_ADMIN', # Nova adição para registro de edição de usuario por admin
-    # 'USER_CREATE_BY_ADMIN', # Nova adição para registro de criação de usuario por admin
+    'UNIDADE_CRIADA', 
+    'UNIDADE_EDITADA', 
+    'AGENTE_CRIADO', 
+    'AGENTE_EDITADO', 
+    'USER_EDIT_BY_ADMIN', 
+    'USER_CREATE_BY_ADMIN',
+    'UNIDADE_ATIVADA',
+    'UNIDADE_INATIVADA',
+    'AGENTE_ATIVADO',
+    'AGENTE_INATIVADO',
+    'USUARIO_ATIVADO',
+    'USUARIO_INATIVADO',
+    'USER_EDIT_BY_AGENTE',
+    'USER_INACTIVATE_BY_AGENTE',
+    'USER_REACTIVATE_BY_AGENTE',
+    'CONFERENTE_ATRIBUIDO',
+    'CONFERENTE_REMOVIDO',
+    'BLOQUEIO_DIA',
+    'BLOQUEIO_LOTE',
+    'ARQUIVAR_FOLHA',
+    'DESARQUIVAR_FOLHA',
+    'ARQUIVAR_FOLHA_LOTE',
+    'SALVAR_OBSERVACOES_FOLHA',
+    'DELEGADO_CRIADO',
+    'DELEGADO_EDITADO',
+    'DELEGADO_ATIVADO',
+    'DELEGADO_INATIVADO',
 ]
 
 def registrar_log(request, acao, detalhes=None, ip_address=None):
     if acao not in ACOES_DE_AUDITORIA_ESSENCIAIS:
         return
 
-    usuario_logado = request.user if request.user.is_authenticated else None
+    usuario_logado = request.user if request and request.user.is_authenticated else None
     
     if not ip_address and request:
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -141,12 +140,36 @@ def registrar_log(request, acao, detalhes=None, ip_address=None):
         else:
             ip_address = request.META.get('REMOTE_ADDR')
     
-    print(f"--- DEBUG: registrar_log ---") # DEBUG
-    print(f"Ação: {acao}") # DEBUG
-    print(f"Usuário Logado: {usuario_logado.id_funcional if usuario_logado else 'Sistema'}") # DEBUG
-    print(f"Detalhes recebidos: {detalhes}") # DEBUG
-    print(f"Tipo dos Detalhes: {type(detalhes)}") # DEBUG
-
+    # print(f"--- DEBUG: registrar_log ---") 
+    # print(f"Ação: {acao}") 
+    
     LogAuditoria.objects.create(usuario=usuario_logado, acao=acao, detalhes=detalhes if detalhes is not None else {}, ip_address=ip_address)
-    print(f"Log de Auditoria criado com sucesso para ação '{acao}'.") # DEBUG
-    print(f"----------------------------") # DEBUG
+
+def gerar_folhas_em_lote_para_trimestre_atual():
+    """
+    Gera folhas de ponto para todos os servidores ativos (exceto Admin)
+    para o trimestre atual, se ainda não existirem.
+    """
+    hoje = date.today()
+    trimestre_atual = (hoje.month - 1) // 3 + 1
+    ano_atual = hoje.year
+    
+    # Pega todos os usuários ativos que NÃO são Admin Geral
+    usuarios_ativos = Usuario.objects.filter(ativo=True).exclude(perfil='Administrador Geral')
+    
+    folhas_criadas = 0
+    
+    for usuario in usuarios_ativos:
+        # Verifica se já existe folha para este trimestre
+        if not FolhaPonto.objects.filter(servidor=usuario, ano=ano_atual, trimestre=trimestre_atual).exists():
+            folha = FolhaPonto.objects.create(
+                servidor=usuario,
+                ano=ano_atual,
+                trimestre=trimestre_atual,
+                unidade_id_geracao=usuario.lotacao,
+                status='Em Andamento'
+            )
+            popular_dias_folha(folha) # Popula os dias (Livre/Sabado/Domingo)
+            folhas_criadas += 1
+            
+    return folhas_criadas, trimestre_atual, ano_atual

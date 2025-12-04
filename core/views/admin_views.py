@@ -1,5 +1,5 @@
 # F:\dev\sigaf-novo\core\views\admin_views.py
-# (COMPLETO E CORRIGIDO - REMOVIDO O form.save_m2m() problemático em editar_agente_view)
+# (COMPLETO E CORRIGIDO - Inclui fix do form.save_m2m, fix da variável renomeada e a nova view de geração em lote)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,7 +14,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import date, timedelta
 import json 
 from django.db import transaction 
-from core.utils import registrar_log
+from core.utils import registrar_log, gerar_folhas_em_lote_para_trimestre_atual
 
 # Decorator para garantir que o usuário é Administrador Geral
 def admin_required(view_func):
@@ -221,7 +221,7 @@ def editar_agente_view(request, agente_id):
     if request.method == 'POST':
         form = AdminAgenteChangeForm(request.POST, instance=agente)
         if form.is_valid():
-            mudancas_status = {}
+            mudancas_status = {} 
             if form.cleaned_data['status_servidor'] != form.initial.get('status_servidor'):
                 mudancas_status['status_servidor'] = {
                     'old': form.initial.get('status_servidor'),
@@ -240,8 +240,8 @@ def editar_agente_view(request, agente_id):
 
             unidades_atuacao_antigas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
             
-            agente = form.save() # <--- AQUI ESTAVA O ERRO ANTES. O form.save() já salva.
-            # form.save_m2m()  <--- LINHA REMOVIDA. NUNCA CHAME save_m2m() APÓS save(commit=True)
+            agente = form.save() 
+            # REMOVIDO form.save_m2m() AQUI PARA EVITAR ERRO
             
             unidades_atuacao_novas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
 
@@ -258,7 +258,7 @@ def editar_agente_view(request, agente_id):
                 registrar_log(request, 'AGENTE_EDITADO', {
                     'agente_id': agente.id,
                     'agente_nome': agente.nome,
-                    'mudancas_status': mudancas_status,
+                    'mudancas_status': mudancas_status, 
                     'mudancas_unidades_atuacao': mudancas_unidades_atuacao
                 })
 
@@ -332,7 +332,7 @@ def listar_usuarios_view(request):
 @admin_required
 def adicionar_usuario_admin_view(request):
     if request.method == 'POST':
-        form = AdminUsuarioCreationForm(request.POST)
+        form = AdminUsuarioCreationForm(request.POST) 
         if form.is_valid():
             novo_usuario = form.save()
             registrar_log(request, 'USER_CREATE_BY_ADMIN', { 
@@ -392,11 +392,11 @@ def editar_usuario_admin_view(request, usuario_id):
                 unidades_removidas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_antigas_ids - unidades_atuacao_novas_ids)]
                 mudancas_unidades_atuacao = {
                     'adicionadas': unidades_adicionadas,
-                    'removidas': unidades_removidas
+                    'removidas': unidades_removidas 
                 }
 
             if mudancas or mudancas_unidades_atuacao:
-                registrar_log(request, 'USER_EDIT_BY_ADMIN', {
+                registrar_log(request, 'USER_EDIT_BY_ADMIN', { 
                     'usuario_id': usuario.id,
                     'usuario_nome': usuario.nome,
                     'mudancas': mudancas,
@@ -537,3 +537,22 @@ def admin_auditoria_view(request):
         }
     }
     return render(request, 'core/admin_auditoria.html', context)
+
+# NOVA VIEW: Geração Manual de Folhas em Lote
+@admin_required
+def gerar_folhas_trimestrais_manual_view(request):
+    if request.method == 'POST':
+        qtd, tri, ano = gerar_folhas_em_lote_para_trimestre_atual()
+        
+        if qtd > 0:
+            messages.success(request, f"Sucesso! {qtd} folhas de ponto foram geradas para o {tri}º trimestre de {ano}.")
+            # Opcional: Registrar log de auditoria da ação em massa
+            registrar_log(request, 'CRIAR_FOLHA_MANUAL', {
+                'motivo': 'Geração em Lote via Dashboard Admin',
+                'quantidade_criada': qtd,
+                'periodo': f"{tri}º Tri/{ano}"
+            })
+        else:
+            messages.info(request, f"O sistema verificou todos os servidores ativos: Todas as folhas do {tri}º trimestre de {ano} já existem. Nenhuma nova folha foi criada.")
+            
+    return redirect('core:admin_geral_dashboard')

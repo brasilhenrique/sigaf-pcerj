@@ -61,6 +61,9 @@ urlpatterns = [
     path('admin_geral/auditoria/', admin_views.admin_auditoria_view, name='admin_auditoria'),
     path('admin_geral/usuarios/deletar_permanente/<int:usuario_id>/', admin_views.deletar_usuario_permanente_view, name='deletar_usuario_permanente'),
     
+    # NOVA ROTA: Geração de folhas em lote
+    path('admin_geral/gerar_folhas_lote/', admin_views.gerar_folhas_trimestrais_manual_view, name='gerar_folhas_lote'),
+
     # Gerenciamento de Delegados pelo Admin Geral
     path('admin_geral/delegados/', delegado_gerenciamento_views.listar_delegados_view, name='listar_delegados'),
     path('admin_geral/delegados/adicionar/', delegado_gerenciamento_views.adicionar_delegado_view, name='adicionar_delegado'),
@@ -89,13 +92,13 @@ urlpatterns = [
     path('agente/folhas/arquivadas/', agente_folha_ponto_views.folhas_arquivadas_view, name='folhas_arquivadas'),
 
     # Rotas de Gestão de Conferentes pelo Agente de Pessoal
-    path('agente/conferentes/', agente_usuario_views.listar_conferentes_view, name='listar_conferentes'), # NOVO
-    path('agente/conferentes/atribuir/<int:usuario_id>/', agente_usuario_views.atribuir_conferente_view, name='atribuir_conferente'), # NOVO
-    path('agente/conferentes/remover/<int:usuario_id>/', agente_usuario_views.remover_conferente_view, name='remover_conferente'), # NOVO
+    path('agente/conferentes/', agente_usuario_views.listar_conferentes_view, name='listar_conferentes'), 
+    path('agente/conferentes/atribuir/<int:usuario_id>/', agente_usuario_views.atribuir_conferente_view, name='atribuir_conferente'), 
+    path('agente/conferentes/remover/<int:usuario_id>/', agente_usuario_views.remover_conferente_view, name='remover_conferente'), 
 
     # Minha Folha de Ponto (agora sempre aponta para a assinatura, para todos os perfis aptos)
     path('agente/minha_folha/', servidor_views.dashboard_view, name='agente_minha_folha'),
-    path('delegado/minha_folha/', delegado_views.delegado_minha_folha_view, name='delegado_minha_folha'), # Já existia, mantido.
+    path('delegado/minha_folha/', delegado_views.delegado_minha_folha_view, name='delegado_minha_folha'), 
 
     # Rotas do Delegado
     path('delegado/dashboard/', delegado_views.delegado_dashboard_view, name='delegado_dashboard'),
@@ -107,5 +110,5 @@ urlpatterns = [
     path('delegado/busca/', delegado_views.delegado_busca_view, name='delegado_busca'),
 
     # NOVO: Rota para Meu Histórico de Folhas
-    path('meu_historico/', servidor_views.meu_historico_folhas_view, name='meu_historico_folhas'), # Nova rota aqui
+    path('meu_historico/', servidor_views.meu_historico_folhas_view, name='meu_historico_folhas'), 
 ]
