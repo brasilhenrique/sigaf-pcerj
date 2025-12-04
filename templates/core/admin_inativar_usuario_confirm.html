@@ -3,7 +3,7 @@
 {% block title %}Inativar Usuário{% endblock %}
 
 {% block page_title %}Confirmar Inativação{% endblock %}
-{% block page_title_header %}Confirmar Inativação{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Confirmar Inativação{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -12,17 +12,26 @@
             <div class="card-header">
                 <h3 class="card-title">Inativar Usuário</h3>
             </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="card-body">
+            <div class="card-body">
+                <div class="alert alert-warning">
                     <p>Você tem certeza que deseja inativar o usuário <strong>{{ usuario.nome }}</strong>?</p>
-                    <p class="text-muted">O usuário não poderá mais acessar o sistema, mas seus registros históricos serão mantidos.</p>
+                    <p class="mb-0">O usuário não poderá mais acessar o sistema, mas seus registros históricos serão mantidos.</p>
                 </div>
-                <div class="card-footer">
-                    <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary">Cancelar</a> {# Ajustado para usar namespace #}
-                    <button type="submit" class="btn btn-warning float-right">Confirmar Inativação</button>
-                </div>
-            </form>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <p>Selecione o motivo:</p>
+                        {{ form.as_p }}
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <a href="{% url 'core:listar_usuarios' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                        <button type="submit" class="btn btn-warning">Confirmar Inativação</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

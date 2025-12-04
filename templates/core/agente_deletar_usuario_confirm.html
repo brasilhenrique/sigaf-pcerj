@@ -9,13 +9,23 @@
 
 <div class="alert alert-danger" role="alert">
     <strong>Atenção!</strong> Você está prestes a inativar o usuário: <strong>{{ usuario.nome }} ({{ usuario.id_funcional }})</strong>.
-    <p>Esta ação irá remover o acesso do usuário ao sistema. Deseja continuar?</p>
+    <p>Esta ação irá remover o acesso do usuário ao sistema.</p>
 </div>
 
-<form method="post">
-    {% csrf_token %}
-    {# CORREÇÃO AQUI: Adicionado 'core:' antes de 'agente_dashboard' #}
-    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary">Cancelar</a>
-    <button type="submit" class="btn btn-danger">Sim, Inativar Usuário</button>
-</form>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <p>Por favor, selecione o motivo da inativação:</p>
+            {{ form.as_p }}
+
+            <div class="mt-4 d-flex justify-content-end">
+                {# CORREÇÃO: Adicionado 'core:' antes de 'agente_dashboard' #}
+                <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a>
+                <button type="submit" class="btn btn-danger">Sim, Inativar Usuário</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}

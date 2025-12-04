@@ -1,5 +1,4 @@
-# F:\dev\sigaf-novo\core\views\admin_views.py
-# (COMPLETO E CORRIGIDO - Inclui fix do form.save_m2m, fix da variável renomeada e a nova view de geração em lote)
+# F:\dev\sigaf-novo\core\views\admin_views.py (ATUALIZADO)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
@@ -9,14 +8,13 @@ from django.db.models import Q
 from core.models import Usuario, Unidade, LogAuditoria, FolhaPonto
 from core.forms import UnidadeForm, AdminAgenteCreationForm, AdminAgenteChangeForm, \
     UsuarioCreationForm, UsuarioChangeForm, AdminProfileForm, \
-    AdminUsuarioCreationForm, AdminUsuarioChangeForm
+    AdminUsuarioCreationForm, AdminUsuarioChangeForm, InativarUsuarioForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import date, timedelta
 import json 
 from django.db import transaction 
 from core.utils import registrar_log, gerar_folhas_em_lote_para_trimestre_atual
 
-# Decorator para garantir que o usuário é Administrador Geral
 def admin_required(view_func):
     @login_required
     def _wrapped_view(request, *args, **kwargs):
@@ -26,7 +24,6 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-# Função de ordenação para as unidades
 def custom_sort_key(unidade):
     match = re.match(r'^(\d+)', unidade.nome_unidade)
     if match:
@@ -74,7 +71,6 @@ def admin_geral_dashboard_view(request):
     return render(request, 'core/admin_geral_dashboard.html', context)
 
 
-# --- Views de Unidade ---
 @admin_required
 def listar_unidades_view(request):
     unidades_ordenadas = sorted(Unidade.objects.all(), key=custom_sort_key)
@@ -172,8 +168,6 @@ def inativar_unidade_view(request, unidade_id):
     }
     return render(request, 'core/admin_excluir_unidade_confirm.html', context)
 
-
-# --- Views de Agente (Gerenciamento de Agentes pelo Admin Geral) ---
 @admin_required
 def listar_agentes_view(request):
     agentes_ordenados = sorted(Usuario.objects.filter(perfil='Agente de Pessoal'), key=lambda u: u.nome)
@@ -229,7 +223,7 @@ def editar_agente_view(request, agente_id):
                 }
             
             if mudancas_status.get('status_servidor'):
-                if mudancas_status['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and agente.ativo:
+                if mudancas_status['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido', 'Exonerado', 'Licenciado'] and agente.ativo:
                     agente.ativo = False
                     agente.data_inativacao = date.today()
                     messages.info(request, f"O Agente {agente.nome} foi automaticamente inativado e a data de inativação registrada.")
@@ -241,7 +235,6 @@ def editar_agente_view(request, agente_id):
             unidades_atuacao_antigas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
             
             agente = form.save() 
-            # REMOVIDO form.save_m2m() AQUI PARA EVITAR ERRO
             
             unidades_atuacao_novas_ids = set(agente.unidades_atuacao.all().values_list('id', flat=True)) 
 
@@ -255,7 +248,7 @@ def editar_agente_view(request, agente_id):
                 }
             
             if mudancas_status or mudancas_unidades_atuacao: 
-                registrar_log(request, 'AGENTE_EDITADO', {
+                registrar_log(request, 'AGENTE_EDITADO', { 
                     'agente_id': agente.id,
                     'agente_nome': agente.nome,
                     'mudancas_status': mudancas_status, 
@@ -302,11 +295,10 @@ def inativar_agente_view(request, agente_id):
         return redirect('core:listar_agentes')
     return render(request, 'core/admin_inativar_agente_confirm.html', {'agente': agente})
 
-
-# --- Views de Usuário (Gerenciamento de Usuários pelo Admin Geral) ---
 @admin_required
 def listar_usuarios_view(request):
     search_query = request.GET.get('q', '')
+    # CORREÇÃO: .all() em vez de .filter(ativo=True) para ver inativos e poder reativá-los
     usuarios_queryset = Usuario.objects.all()
 
     if search_query:
@@ -332,10 +324,10 @@ def listar_usuarios_view(request):
 @admin_required
 def adicionar_usuario_admin_view(request):
     if request.method == 'POST':
-        form = AdminUsuarioCreationForm(request.POST) 
+        form = AdminUsuarioCreationForm(request.POST)
         if form.is_valid():
             novo_usuario = form.save()
-            registrar_log(request, 'USER_CREATE_BY_ADMIN', { 
+            registrar_log(request, 'USER_CREATE_BY_ADMIN', {
                 'novo_usuario_id': novo_usuario.id,
                 'novo_usuario_nome': novo_usuario.nome,
                 'novo_usuario_id_funcional': novo_usuario.id_funcional,
@@ -367,7 +359,7 @@ def editar_usuario_admin_view(request, usuario_id):
             unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True)) 
 
             if 'status_servidor' in mudancas:
-                if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and usuario.ativo:
+                if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido', 'Exonerado', 'Licenciado'] and usuario.ativo:
                     usuario.ativo = False
                     usuario.data_inativacao = date.today()
                     messages.info(request, f"O usuário {usuario.nome} foi automaticamente inativado e a data de inativação registrada.")
@@ -396,7 +388,7 @@ def editar_usuario_admin_view(request, usuario_id):
                 }
 
             if mudancas or mudancas_unidades_atuacao:
-                registrar_log(request, 'USER_EDIT_BY_ADMIN', { 
+                registrar_log(request, 'USER_EDIT_BY_ADMIN', {
                     'usuario_id': usuario.id,
                     'usuario_nome': usuario.nome,
                     'mudancas': mudancas,
@@ -416,28 +408,32 @@ def editar_usuario_admin_view(request, usuario_id):
 def inativar_usuario_admin_view(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     if usuario.perfil == 'Administrador Geral' and request.user == usuario:
-        messages.error(request, "Você não pode inativar a si mesmo por esta interface. Peça a outro administrador ou use o painel Django admin se necessário.")
+        messages.error(request, "Você não pode inativar a si mesmo por esta interface.")
         return redirect('core:listar_usuarios')
 
     if request.method == 'POST':
-        usuario.ativo = not usuario.ativo
-        if not usuario.ativo and usuario.status_servidor == 'Ativo':
-            usuario.status_servidor = 'Demitido'
-            usuario.data_inativacao = date.today()
-        elif usuario.ativo and usuario.status_servidor != 'Ativo':
-            usuario.status_servidor = 'Ativo'
-            usuario.data_inativacao = None
-        
-        usuario.save()
-        log_acao = 'USUARIO_ATIVADO' if usuario.ativo else 'USUARIO_INATIVADO'
-        registrar_log(request, log_acao, {
-            'usuario_id': usuario.id,
-            'usuario_nome': usuario.nome,
-            'status_novo': 'Ativo' if usuario.ativo else usuario.status_servidor
-        })
-        messages.success(request, f"Usuário '{usuario.nome}' foi {'ativado' if usuario.ativo else 'inativado'} com sucesso.")
-        return redirect('core:listar_usuarios')
-    return render(request, 'core/admin_inativar_usuario_confirm.html', {'usuario': usuario})
+        form = InativarUsuarioForm(request.POST)
+        if form.is_valid():
+            if usuario.ativo:
+                novo_status = form.cleaned_data['motivo']
+                usuario.ativo = False
+                usuario.status_servidor = novo_status
+                usuario.data_inativacao = date.today()
+                usuario.save()
+                
+                registrar_log(request, 'USUARIO_INATIVADO', {
+                    'usuario_id': usuario.id,
+                    'usuario_nome': usuario.nome,
+                    'status_novo': usuario.status_servidor
+                })
+                messages.success(request, f"Usuário '{usuario.nome}' foi inativado com sucesso. Status: {usuario.status_servidor}.")
+            else:
+                messages.info(request, f"O usuário '{usuario.nome}' já está inativo.")
+            return redirect('core:listar_usuarios')
+    else:
+        form = InativarUsuarioForm()
+
+    return render(request, 'core/admin_inativar_usuario_confirm.html', {'usuario': usuario, 'form': form})
 
 @admin_required
 def deletar_usuario_permanente_view(request, usuario_id):
@@ -538,7 +534,6 @@ def admin_auditoria_view(request):
     }
     return render(request, 'core/admin_auditoria.html', context)
 
-# NOVA VIEW: Geração Manual de Folhas em Lote
 @admin_required
 def gerar_folhas_trimestrais_manual_view(request):
     if request.method == 'POST':
@@ -546,7 +541,6 @@ def gerar_folhas_trimestrais_manual_view(request):
         
         if qtd > 0:
             messages.success(request, f"Sucesso! {qtd} folhas de ponto foram geradas para o {tri}º trimestre de {ano}.")
-            # Opcional: Registrar log de auditoria da ação em massa
             registrar_log(request, 'CRIAR_FOLHA_MANUAL', {
                 'motivo': 'Geração em Lote via Dashboard Admin',
                 'quantidade_criada': qtd,

@@ -1,4 +1,4 @@
-# ARQUIVO: core/forms.py (VERSÃO CORRIGIDA FINAL PARA ATRIBUIÇÃO DE CONFERENTE E DELEGADO POR AGENTE)
+# ARQUIVO: core/forms.py (COMPLETO)
 
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm, UserChangeForm
@@ -6,7 +6,6 @@ from .models import FolhaPonto, Usuario, Unidade, CodigoOcorrencia, Transferenci
 from datetime import date
 import re 
 
-# Função de ordenação personalizada para unidades
 def custom_sort_key(unidade):
     match = re.match(r'^(\d+)', unidade.nome_unidade)
     if match:
@@ -19,6 +18,21 @@ class ChangePasswordForm(PasswordChangeForm):
     old_password = forms.CharField(label="Senha Antiga", strip=False, widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'autofocus': True, 'class': 'form-control'}))
     new_password1 = forms.CharField(label="Nova Senha", strip=False, widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control'}))
     new_password2 = forms.CharField(label="Confirmação da Nova Senha", strip=False, widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control'}))
+
+# NOVO FORMULÁRIO PARA INATIVAR USUÁRIO COM MOTIVO
+class InativarUsuarioForm(forms.Form):
+    motivo = forms.ChoiceField(
+        choices=[], 
+        label="Motivo da Inativação", 
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Selecione o motivo para inativar este servidor."
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtra a opção 'Ativo' para não aparecer na lista de inativação
+        choices = [c for c in Usuario.STATUS_CHOICES if c[0] != 'Ativo']
+        self.fields['motivo'].choices = choices
 
 # FORMULÁRIOS DO MÓDULO AGENTE DE PESSOAL
 class CriarFolhaManualForm(forms.ModelForm):
@@ -36,7 +50,7 @@ class CriarFolhaManualForm(forms.ModelForm):
                 lotacao__in=user.unidades_atuacao.all(), 
                 ativo=True
             ).exclude(
-                perfil__in=['Administrador Geral', 'Delegado de Polícia']
+                 perfil__in=['Administrador Geral', 'Delegado de Polícia']
             ).order_by('nome')
         else: 
             self.fields['servidor'].queryset = Usuario.objects.filter(
@@ -52,7 +66,6 @@ class CriarFolhaManualForm(forms.ModelForm):
         ano = cleaned_data.get('ano')
         trimestre = cleaned_data.get('trimestre')
 
-    
         if servidor and ano and trimestre:
             if FolhaPonto.objects.filter(servidor=servidor, ano=ano, trimestre=trimestre).exists():
                 raise forms.ValidationError(f"Já existe uma folha de ponto para {servidor.nome} no {trimestre}º trimestre de {ano}.")
@@ -63,12 +76,12 @@ class AplicarOcorrenciaLoteForm(forms.Form):
     data_inicio_lote = forms.DateField(label="Data de Início", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
     data_fim_lote = forms.DateField(label="Data de Fim", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
 
-class UsuarioCreationForm(forms.ModelForm): # Para Agente de Pessoal criar usuários comuns
+class UsuarioCreationForm(forms.ModelForm): 
     unidades_atuacao = forms.ModelMultipleChoiceField(
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}), 
         required=False,
-        label="Unidades para Conferência" # Label mais direto
+        label="Unidades para Conferência" 
     )
 
     class Meta:
@@ -86,14 +99,11 @@ class UsuarioCreationForm(forms.ModelForm): # Para Agente de Pessoal criar usuá
             if request.user.perfil == 'Agente de Pessoal':
                 sorted_unidades_lotacao = sorted(request.user.unidades_atuacao.filter(ativo=True), key=custom_sort_key)
                 self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
-            else: # Admin Geral ou outros perfis
+            else: 
                 sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
                 self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
-        # MODIFICAÇÃO CHAVE: Incluir 'Delegado de Polícia' nas opções de perfil para o Agente de Pessoal
         if 'perfil' in self.fields:
-            # O Agente só pode criar policiais (cargos) ou Delegados.
-            # A atribuição de Conferente será feita via unidades_atuacao, não via perfil principal.
             self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [('Delegado de Polícia', 'Delegado de Polícia')]
 
 
@@ -103,22 +113,20 @@ class UsuarioCreationForm(forms.ModelForm): # Para Agente de Pessoal criar usuá
             user.set_password(user.id_funcional)
         user.username = user.id_funcional
         
-        # O is_staff deve ser False para um novo servidor comum,
-        # independentemente das unidades de atuação, a menos que seja delegado
-        if user.perfil != 'Delegado de Polícia': # Delegados podem precisar de is_staff para o Admin Django
+        if user.perfil != 'Delegado de Polícia': 
             user.is_staff = False
 
         if commit: 
             user.save()
-            self.save_m2m() # Salva as relações ManyToMany, como 'unidades_atuacao'
+            self.save_m2m() 
         return user
 
-class UsuarioChangeForm(forms.ModelForm): # Para Agente de Pessoal editar usuários comuns
+class UsuarioChangeForm(forms.ModelForm): 
     unidades_atuacao = forms.ModelMultipleChoiceField(
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}), 
         required=False,
-        label="Unidades para Conferência" # Label mais direto
+        label="Unidades para Conferência" 
     )
     class Meta:
         model = Usuario
@@ -139,7 +147,6 @@ class UsuarioChangeForm(forms.ModelForm): # Para Agente de Pessoal editar usuár
                 sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
                 self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
-        # MODIFICAÇÃO CHAVE: Incluir 'Delegado de Polícia' nas opções de perfil para o Agente de Pessoal
         if 'perfil' in self.fields:
             self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [('Delegado de Polícia', 'Delegado de Polícia')]
 
@@ -187,7 +194,7 @@ class AdminAgenteCreationForm(forms.ModelForm):
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}), 
         required=False,
-        label="Unidades de Atuação (Gerência/Conferência)" # Revertido para o label original completo
+        label="Unidades de Atuação (Gerência/Conferência)" 
     )
     class Meta:
         model = Usuario
@@ -220,7 +227,7 @@ class AdminAgenteChangeForm(forms.ModelForm):
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}), 
         required=False,
-        label="Unidades de Atuação (Gerência/Conferência)" # Revertido para o label original completo
+        label="Unidades de Atuação (Gerência/Conferência)" 
     )
     class Meta:
         model = Usuario
@@ -236,7 +243,7 @@ class AdminAgenteChangeForm(forms.ModelForm):
             sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
-class AdminUsuarioCreationForm(forms.ModelForm): # Para Admin Geral criar usuários comuns (cargos policiais)
+class AdminUsuarioCreationForm(forms.ModelForm): 
     unidades_atuacao = forms.ModelMultipleChoiceField(
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}), 
@@ -254,13 +261,9 @@ class AdminUsuarioCreationForm(forms.ModelForm): # Para Admin Geral criar usuár
                 field.widget.attrs['class'] = 'form-control'
         
         if 'lotacao' in self.fields:
-            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), 
-            key=custom_sort_key)
+            sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
         
-        # O Admin Geral pode criar qualquer perfil listado em POLICIA_CARGOS.
-        # Adiciona a opção de criar um Delegado, e também um Agente de Pessoal,
-        # mas não "Conferente" como perfil principal, pois é uma atribuição.
         if 'perfil' in self.fields:
             self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [
                 ('Delegado de Polícia', 'Delegado de Polícia'),
@@ -273,17 +276,15 @@ class AdminUsuarioCreationForm(forms.ModelForm): # Para Admin Geral criar usuár
         user.set_password(user.id_funcional)
         user.username = user.id_funcional
 
-        # Garante que is_staff seja False para perfis comuns, a menos que explicitamente marcado no Admin Django.
-        # Apenas Administrador Geral e Delegado de Polícia devem ter is_staff = True por padrão.
         if user.perfil not in ['Administrador Geral', 'Delegado de Polícia']:
             user.is_staff = False
 
         if commit:
             user.save()
-            self.save_m2m() # Salva as relações ManyToMany, como 'unidades_atuacao'
+            self.save_m2m() 
         return user
 
-class AdminUsuarioChangeForm(UserChangeForm): # Para Admin Geral editar usuários comuns (cargos policiais)
+class AdminUsuarioChangeForm(UserChangeForm): 
     password = None 
     unidades_atuacao = forms.ModelMultipleChoiceField(
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
@@ -305,8 +306,6 @@ class AdminUsuarioChangeForm(UserChangeForm): # Para Admin Geral editar usuário
             sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
             
-        # O Admin Geral pode editar qualquer perfil listado em POLICIA_CARGOS.
-        # Adiciona a opção de editar para Delegado e Agente de Pessoal.
         if 'perfil' in self.fields:
             self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [
                 ('Delegado de Polícia', 'Delegado de Polícia'),
@@ -322,7 +321,6 @@ class AdminProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): field.widget.attrs['class'] = 'form-control'
 
-# --- NOVOS FORMS PARA ADMIN GERAL: GESTÃO DE DELEGADOS ---
 class AdminDelegadoCreationForm(forms.ModelForm):
     unidades_atuacao = forms.ModelMultipleChoiceField(
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
@@ -351,19 +349,9 @@ class AdminDelegadoCreationForm(forms.ModelForm):
         user.perfil = 'Delegado de Polícia'
         user.username = user.id_funcional
         
-        print("\n--- DEPURAÇÃO: AdminDelegadoCreationForm.save() ---")
-        print(f"Commit é {commit}")
-        print(f"User instance antes do save principal: {user}")
-        print(f"User PK antes do save principal: {user.pk}")
-        print(f"unidades_atuacao na cleaned_data (dentro do form.save): {self.cleaned_data.get('unidades_atuacao')}")
-        # --- FIM DEPURAÇÃO ---
-
         if commit:
             user.save()
-            print(f"User instance APÓS save principal: {user}")
-            print(f"User PK APÓS save principal: {user.pk}")
-            print(f"Chamando self.save_m2m() em {self.__class__.__name__}")
-            self.save_m2m() # AQUI é onde o M2M é salvo
+            self.save_m2m() 
         return user
 
 class AdminDelegadoChangeForm(forms.ModelForm):
@@ -387,10 +375,6 @@ class AdminDelegadoChangeForm(forms.ModelForm):
             sorted_unidades_lotacao = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
-# NOVO FORMULÁRIO: AtribuirConferenteForm
-# ATENÇÃO: Este formulário será usado APENAS para a tela de "Gestão de Conferentes" do Agente de Pessoal,
-# onde ele pode adicionar/remover atribuições de conferência para usuários existentes.
-# O perfil primário do usuário NÃO é alterado por este formulário.
 class AtribuirConferenteForm(forms.ModelForm): 
     unidades_atuacao = forms.ModelMultipleChoiceField( 
         queryset=Unidade.objects.filter(ativo=True).order_by('nome_unidade'),
@@ -401,8 +385,6 @@ class AtribuirConferenteForm(forms.ModelForm):
     
     class Meta: 
         model = Usuario
-        # Apenas o campo unidades_atuacao será editado por este formulário.
-        # O perfil do usuário NÃO será definido aqui.
         fields = ['unidades_atuacao']
 
     def __init__(self, *args, **kwargs):

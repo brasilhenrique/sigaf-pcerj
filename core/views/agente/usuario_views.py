@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\views\agente\usuario_views.py (CORRIGIDO - Erro 405)
+# F:\dev\sigaf-novo\core\views\agente\usuario_views.py (ATUALIZADO - Inativação com Motivo)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -9,7 +9,7 @@ from django.db import transaction
 from datetime import date 
 
 from core.models import Usuario, Transferencia, Unidade, FolhaPonto
-from core.forms import UsuarioCreationForm, UsuarioChangeForm, TransferenciaForm, AtribuirConferenteForm 
+from core.forms import UsuarioCreationForm, UsuarioChangeForm, TransferenciaForm, AtribuirConferenteForm, InativarUsuarioForm 
 from core.utils import registrar_log
 
 def agente_required(view_func):
@@ -66,7 +66,7 @@ def editar_usuario_view(request, usuario_id):
             unidades_atuacao_antigas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True)) 
 
             if 'status_servidor' in mudancas:
-                if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido'] and usuario.ativo:
+                if mudancas['status_servidor']['new'] in ['Aposentado', 'Demitido', 'Falecido', 'Exonerado', 'Licenciado'] and usuario.ativo:
                     usuario.ativo = False
                     usuario.data_inativacao = date.today()
                     messages.info(request, f"O usuário {usuario.nome} foi automaticamente inativado e a data de inativação registrada.")
@@ -75,7 +75,6 @@ def editar_usuario_view(request, usuario_id):
                     usuario.data_inativacao = None
                     messages.info(request, f"O usuário {usuario.nome} foi automaticamente reativado e a data de inativação removida.")
 
-            # O `is_staff` deve ser False para cargos policiais ou conferentes.
             if usuario.perfil in [cargo[0] for cargo in Usuario.POLICIA_CARGOS]:
                 if usuario.is_staff: 
                     usuario.is_staff = False
@@ -107,7 +106,7 @@ def editar_usuario_view(request, usuario_id):
         form = UsuarioChangeForm(instance=usuario, request=request) 
     return render(request, 'core/agente_form_usuario.html', {'form': form, 'titulo': f'Editando: {usuario.nome}'})
 
-# ATENÇÃO: @require_POST removido desta view para permitir que o fluxo GET mostre a página de confirmação
+# ATENÇÃO: @require_POST removido para permitir GET da página de confirmação
 @agente_required
 def inativar_usuario_view(request, usuario_id): 
     usuario = get_object_or_404(Usuario, id=usuario_id)
@@ -119,24 +118,29 @@ def inativar_usuario_view(request, usuario_id):
         messages.error(request, 'Você não tem permissão para inativar este usuário.')
         return redirect('core:agente_dashboard')
 
-    if request.method == 'POST': 
-        if usuario.ativo: 
-            usuario.ativo = False
-            usuario.status_servidor = 'Demitido' 
-            usuario.data_inativacao = date.today()
-            usuario.save()
-            registrar_log(request, 'USER_INACTIVATE_BY_AGENTE', {
-                'usuario_id': usuario.id,
-                'usuario_nome': usuario.nome,
-                'motivo_status': usuario.status_servidor,
-                'data_inativacao': str(usuario.data_inativacao)
-            })
-            messages.success(request, f'Usuário "{usuario.nome}" inativado com sucesso. Status definido como "{usuario.status_servidor}".')
-        else:
-            messages.info(request, f'O usuário "{usuario.nome}" já está inativo.')
-        return redirect('core:agente_dashboard')
+    if request.method == 'POST':
+        form = InativarUsuarioForm(request.POST)
+        if form.is_valid():
+            if usuario.ativo: 
+                novo_status = form.cleaned_data['motivo']
+                usuario.ativo = False
+                usuario.status_servidor = novo_status
+                usuario.data_inativacao = date.today()
+                usuario.save()
+                registrar_log(request, 'USER_INACTIVATE_BY_AGENTE', {
+                    'usuario_id': usuario.id,
+                    'usuario_nome': usuario.nome,
+                    'motivo_status': usuario.status_servidor,
+                    'data_inativacao': str(usuario.data_inativacao)
+                })
+                messages.success(request, f'Usuário "{usuario.nome}" inativado com sucesso. Status definido como "{usuario.status_servidor}".')
+            else:
+                messages.info(request, f'O usuário "{usuario.nome}" já está inativo.')
+            return redirect('core:agente_dashboard')
+    else:
+        form = InativarUsuarioForm()
         
-    return render(request, 'core/agente_deletar_usuario_confirm.html', {'usuario': usuario}) 
+    return render(request, 'core/agente_deletar_usuario_confirm.html', {'usuario': usuario, 'form': form}) 
 
 @agente_required
 def transferir_usuario_view(request, usuario_id):
@@ -259,7 +263,6 @@ def reativar_usuario_view(request, usuario_id):
     messages.success(request, f"O usuário {usuario.nome} foi reativado com sucesso. Status definido como '{usuario.status_servidor}'.")
     return redirect('core:listar_inativos')
 
-# Views para Atribuição de Conferentes (Agente de Pessoal)
 @agente_required
 def listar_conferentes_view(request):
     agente = request.user
@@ -358,7 +361,7 @@ def remover_conferente_view(request, usuario_id):
 
         registrar_log(request, 'CONFERENTE_REMOVIDO', {
             'usuario_conferente_id': usuario.id,
-            'usuario_conferente_nome': usuario_nome,
+            'usuario_conferente_nome': usuario.nome,
             'unidades_atuacao_removidas': unidades_atuacao_removidas,
             'removido_por_agente': agente.id_funcional
         })
