@@ -61,7 +61,7 @@
                             <td>{{ usuario.lotacao.nome_unidade|default:"N/A" }}</td>
                             <td><span class="badge badge-secondary">{{ usuario.status_servidor }}</span></td> {# Ajustado para badge-secondary #}
                             <td>
-                                {% if usuario.lotacao in request.user.unidades_gerenciadas.all %}
+                                {% if usuario.lotacao in request.user.unidades_atuacao.all %}
                                     <form action="{% url 'core:reativar_usuario' usuario.id %}" method="post" class="d-inline"> {# Ajustado para usar namespace #}
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-success" title="Reativar Usuário"><i class="fas fa-user-check"></i> Reativar</button>

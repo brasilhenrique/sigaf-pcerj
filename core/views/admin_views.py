@@ -307,7 +307,7 @@ def inativar_agente_view(request, agente_id):
 @admin_required
 def listar_usuarios_view(request):
     search_query = request.GET.get('q', '')
-    usuarios_queryset = Usuario.objects.filter(ativo=True)
+    usuarios_queryset = Usuario.objects.all()
 
     if search_query:
         usuarios_queryset = usuarios_queryset.filter(
