@@ -1,11 +1,10 @@
-# F:\dev\sigaf-novo\core\views\admin_views.py
-# (COMPLETO E CORRIGIDO - Fix do Erro 500 na edição e Nova View de Reativação)
+# F:\dev\sigaf-novo\core\views\admin_views.py (CORRIGIDO - Inativação de Agente com Motivo)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST # Importante adicionar require_POST
+from django.views.decorators.http import require_POST
 from django.db.models import Q
 from core.models import Usuario, Unidade, LogAuditoria, FolhaPonto
 from core.forms import UnidadeForm, AdminAgenteCreationForm, AdminAgenteChangeForm, \
@@ -278,25 +277,43 @@ def editar_agente_view(request, agente_id):
 @admin_required
 def inativar_agente_view(request, agente_id):
     agente = get_object_or_404(Usuario, id=agente_id, perfil='Agente de Pessoal')
+    
     if request.method == 'POST':
-        agente.ativo = not agente.ativo
-        if not agente.ativo and agente.status_servidor == 'Ativo':
-            agente.status_servidor = 'Demitido' 
-            agente.data_inativacao = date.today()
-        elif agente.ativo and agente.status_servidor != 'Ativo':
-            agente.status_servidor = 'Ativo'
-            agente.data_inativacao = None
+        form = InativarUsuarioForm(request.POST)
+        if form.is_valid():
+            if agente.ativo:
+                novo_status = form.cleaned_data['motivo']
+                agente.ativo = False
+                agente.status_servidor = novo_status
+                agente.data_inativacao = date.today()
+                agente.save()
+                
+                registrar_log(request, 'AGENTE_INATIVADO', {
+                    'agente_id': agente.id,
+                    'agente_nome': agente.nome,
+                    'status_novo': agente.status_servidor
+                })
+                messages.success(request, f"Agente '{agente.nome}' foi inativado com sucesso. Status: {agente.status_servidor}.")
+            else:
+                # Reativação de Agente (sem motivo, volta para Ativo)
+                agente.ativo = True
+                agente.status_servidor = 'Ativo'
+                agente.data_inativacao = None
+                agente.save()
+                
+                registrar_log(request, 'AGENTE_ATIVADO', {
+                    'agente_id': agente.id,
+                    'agente_nome': agente.nome,
+                    'status_novo': 'Ativo'
+                })
+                messages.success(request, f"Agente '{agente.nome}' foi reativado com sucesso.")
+                
+            return redirect('core:listar_agentes')
+    else:
+        form = InativarUsuarioForm()
 
-        agente.save()
-        log_acao = 'AGENTE_ATIVADO' if agente.ativo else 'AGENTE_INATIVADO'
-        registrar_log(request, log_acao, {
-            'agente_id': agente.id,
-            'agente_nome': agente.nome,
-            'status_novo': 'Ativo' if agente.ativo else agente.status_servidor
-        })
-        messages.success(request, f"Agente '{agente.nome}' foi {'ativado' if agente.ativo else 'inativado'} com sucesso.")
-        return redirect('core:listar_agentes')
-    return render(request, 'core/admin_inativar_agente_confirm.html', {'agente': agente})
+    # Se o agente já estiver inativo, passamos uma flag ou apenas renderizamos a confirmação simples
+    return render(request, 'core/admin_inativar_agente_confirm.html', {'agente': agente, 'form': form})
 
 
 @admin_required
@@ -377,11 +394,10 @@ def editar_usuario_admin_view(request, usuario_id):
                     usuario.save(update_fields=['is_staff'])
 
             form.save()
-            form.save_m2m() 
+            # REMOVIDO form.save_m2m() AQUI
             
             unidades_atuacao_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
-            # CORREÇÃO DO ERRO 500 AQUI: Inicializando a variável antes do if
             mudancas_unidades_atuacao = {}
             if unidades_atuacao_antigas_ids != unidades_atuacao_novas_ids:
                 unidades_adicionadas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_novas_ids - unidades_atuacao_antigas_ids)]
@@ -439,7 +455,6 @@ def inativar_usuario_admin_view(request, usuario_id):
 
     return render(request, 'core/admin_inativar_usuario_confirm.html', {'usuario': usuario, 'form': form})
 
-# NOVA VIEW: Reativar Usuário (Admin)
 @admin_required
 @require_POST
 def reativar_usuario_admin_view(request, usuario_id):

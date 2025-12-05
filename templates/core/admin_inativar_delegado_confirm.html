@@ -1,4 +1,3 @@
-{# F:\dev\sigaf-novo\templates\core\admin_inativar_delegado_confirm.html (NOVO) #}
 {% extends 'base_adminlte.html' %}
 
 {% block title %}Inativar Delegado{% endblock %}
@@ -13,17 +12,40 @@
             <div class="card-header">
                 <h3 class="card-title">Inativar Delegado de Polícia</h3>
             </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="card-body">
-                    <p>Você tem certeza que deseja inativar o Delegado <strong>{{ delegado.nome }}</strong>?</p>
-                    <p class="text-muted">O usuário não poderá mais acessar o sistema, mas seus registros e responsabilidades de conferência serão mantidos para consulta.</p>
-                </div>
-                <div class="card-footer">
-                    <a href="{% url 'core:listar_delegados' %}" class="btn btn-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-warning float-right">Confirmar Inativação</button>
-                </div>
-            </form>
+            <div class="card-body">
+                {% if delegado.ativo %}
+                    <div class="alert alert-warning">
+                        <p>Você tem certeza que deseja inativar o Delegado <strong>{{ delegado.nome }}</strong>?</p>
+                        <p class="text-muted">O usuário não poderá mais acessar o sistema.</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <p>Selecione o motivo da inativação:</p>
+                            {{ form.as_p }}
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'core:listar_delegados' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                            <button type="submit" class="btn btn-warning">Confirmar Inativação</button>
+                        </div>
+                    </form>
+                
+                {% else %}
+                    {# Opção de Reativar Delegado #}
+                    <div class="alert alert-info">
+                        <p>O Delegado <strong>{{ delegado.nome }}</strong> encontra-se atualmente <strong>Inativo ({{ delegado.status_servidor }})</strong>.</p>
+                        <p class="mb-0">Deseja reativar este delegado?</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'core:listar_delegados' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Confirmar Reativação</button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

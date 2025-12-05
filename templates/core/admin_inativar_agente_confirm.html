@@ -3,7 +3,7 @@
 {% block title %}Inativar Agente{% endblock %}
 
 {% block page_title %}Confirmar Inativação de Agente{% endblock %}
-{% block page_title_header %}Confirmar Inativação de Agente{% endblock %} {# Adicionado para AdminLTE #}
+{% block page_title_header %}Confirmar Inativação de Agente{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -12,17 +12,41 @@
             <div class="card-header">
                 <h3 class="card-title">Inativar Agente de Pessoal</h3>
             </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="card-body">
-                    <p>Você tem certeza que deseja inativar o agente <strong>{{ agente.nome }}</strong>?</p>
-                    <p class="text-muted">O usuário não poderá mais acessar o sistema, mas seus registros e responsabilidades serão mantidos para consulta.</p>
-                </div>
-                <div class="card-footer">
-                    <a href="{% url 'core:listar_agentes' %}" class="btn btn-secondary">Cancelar</a> {# Ajustado para usar namespace #}
-                    <button type="submit" class="btn btn-warning float-right">Confirmar Inativação</button>
-                </div>
-            </form>
+            <div class="card-body">
+                {# Verifica se o agente está ativo para mostrar o formulário, ou se está inativo para mostrar mensagem de reativação #}
+                {% if agente.ativo %}
+                    <div class="alert alert-warning">
+                        <p>Você tem certeza que deseja inativar o agente <strong>{{ agente.nome }}</strong>?</p>
+                        <p class="mb-0">O usuário não poderá mais acessar o sistema.</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <p>Selecione o motivo da inativação:</p>
+                            {{ form.as_p }}
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'core:listar_agentes' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                            <button type="submit" class="btn btn-warning">Confirmar Inativação</button>
+                        </div>
+                    </form>
+
+                {% else %}
+                    {# Caso o agente já esteja inativo, mostra opção de reativar #}
+                    <div class="alert alert-info">
+                        <p>O agente <strong>{{ agente.nome }}</strong> encontra-se atualmente <strong>Inativo ({{ agente.status_servidor }})</strong>.</p>
+                        <p class="mb-0">Deseja reativar este agente?</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'core:listar_agentes' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Confirmar Reativação</button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

@@ -92,7 +92,6 @@
                                         </button>
                                     </form>
                                 {% else %} 
-                                    {# AQUI ESTÁ A MUDANÇA: Se ativo, Inativar. Se inativo, Reativar. #}
                                     <a href="{% url 'core:editar_usuario_admin' usuario.id %}" class="btn btn-sm btn-info" title="Editar Servidor"><i class="fas fa-edit"></i></a>
                                     
                                     {% if usuario.ativo %}
@@ -103,6 +102,7 @@
                                             </button>
                                         </form>
                                     {% else %}
+                                        {# CORREÇÃO AQUI: URL para reativar_usuario_admin #}
                                         <form action="{% url 'core:reativar_usuario_admin' usuario.id %}" method="post" class="d-inline">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-success" title="Reativar Usuário">
