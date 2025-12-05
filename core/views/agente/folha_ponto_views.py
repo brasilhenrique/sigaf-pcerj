@@ -266,6 +266,7 @@ def agente_criar_folha_view(request):
         if form.is_valid():
             folha = form.save(commit=False)
             folha.unidade_id_geracao = folha.servidor.lotacao 
+            folha.cargo_servidor_na_folha = folha.servidor.perfil # <--- SNAPSHOT AQUI
 
             try:
                 with transaction.atomic():
@@ -278,7 +279,8 @@ def agente_criar_folha_view(request):
                         'trimestre': folha.trimestre,
                         'ano': folha.ano,
                         'unidade_geracao': folha.unidade_id_geracao.nome_unidade if folha.unidade_id_geracao else 'N/A',
-                        'motivo': 'Criação Manual por Agente/Admin'
+                        'motivo': 'Criação Manual por Agente/Admin',
+                        'cargo_registrado': folha.cargo_servidor_na_folha
                     })
                     return redirect('core:gerenciar_ponto', folha_id=folha.id)
             except Exception as e:
@@ -450,7 +452,7 @@ def arquivar_lote_view(request):
 def folhas_arquivadas_view(request):
     """
     Exibe todas as folhas de ponto arquivadas para as unidades de atuação do Agente de Pessoal.
-    Se for Admin Geral, exibe as folhas arquivadas de TODO o sistema (pode ser muito, mas por enquanto ok).
+    Se for Admin Geral, exibe as folhas arquivadas de TODO o sistema.
     """
     usuario = request.user
     

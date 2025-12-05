@@ -60,7 +60,6 @@ class Usuario(AbstractUser):
 
     PERFIL_CHOICES = POLICIA_CARGOS + PERFIS_FUNCIONAL 
     
-    # MODIFICADO: Adicionados Exonerado e Licenciado
     STATUS_CHOICES = [
         ('Ativo', 'Ativo'),
         ('Aposentado', 'Aposentado'),
@@ -167,9 +166,18 @@ class FolhaPonto(models.Model):
     data_geracao = models.DateTimeField(auto_now_add=True)
     ativa = models.BooleanField(default=True)
     observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
+    
+    # NOVO CAMPO: Snapshot do cargo para histórico
+    cargo_servidor_na_folha = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cargo na Época")
 
     def __str__(self):
         return f"Folha de {self.servidor.nome} - {self.get_trimestre_display()} de {self.ano}"
+
+    def save(self, *args, **kwargs):
+        # Se o campo estiver vazio e o servidor existir, preenche com o perfil atual
+        if not self.cargo_servidor_na_folha and self.servidor:
+            self.cargo_servidor_na_folha = self.servidor.perfil
+        super().save(*args, **kwargs)
 
     def update_status(self):
         if self.status == 'Arquivada':

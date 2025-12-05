@@ -20,8 +20,7 @@
         .header-table .gov-info { text-align: left; font-weight: bold; }
         .header-table .gov-info span { font-weight: normal; }
         .header-table .title-center { 
-            text-align: center; 
-            font-weight: bold; 
+            text-align: center; font-weight: bold; 
             font-size: 8.5pt; 
             padding-top: 4px;
             padding-bottom: 4px;
@@ -71,7 +70,8 @@
             </tr>
             <tr>
                 <td colspan="2" class="title-center border-bottom-dotted">CARTÃO DE FREQUÊNCIA TRIMESTRAL - {{ folha.get_trimestre_display|upper }} / {{ folha.ano }}</td>
-                <td class="right-info border-bottom-dotted"><span>{{ folha.servidor.perfil|upper }}</span></td>
+                {# Tenta usar o cargo congelado, se não existir (legado), usa o perfil atual #}
+                <td class="right-info border-bottom-dotted"><span>{{ folha.cargo_servidor_na_folha|default:folha.servidor.perfil|upper }}</span></td>
             </tr>
             <tr>
                 <td colspan="2" class="gov-info">SECRETARIA DE ESTADO DE POLÍCIA CIVIL<br>

@@ -1,4 +1,4 @@
-# core/management/commands/gerar_folhas_trimestrais.py (MODIFICADO - Gera folhas para Agentes e Delegados)
+# core/management/commands/gerar_folhas_trimestrais.py
 
 import sys
 from datetime import date
@@ -25,7 +25,7 @@ class Command(BaseCommand):
         
         self.stdout.write(f"Iniciando verificação para o {trimestre_atual}º trimestre de {ano_atual}.")
 
-        # MODIFICADO: Gera folhas para QUALQUER usuário ATIVO, EXCETO Administrador Geral.
+        # Gera folhas para QUALQUER usuário ATIVO, EXCETO Administrador Geral.
         usuarios_ativos = Usuario.objects.filter(ativo=True).exclude(perfil='Administrador Geral')
         
         folhas_criadas_count = 0
@@ -48,7 +48,8 @@ class Command(BaseCommand):
                             ano=ano_atual,
                             trimestre=trimestre_atual,
                             unidade_id_geracao=usuario.lotacao,
-                            status='Em Andamento'
+                            status='Em Andamento',
+                            cargo_servidor_na_folha=usuario.perfil # Salva o cargo atual na folha
                         )
                         # Popula os dias da folha recém-criada
                         popular_dias_folha(nova_folha)
