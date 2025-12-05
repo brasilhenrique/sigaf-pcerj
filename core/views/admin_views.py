@@ -1,9 +1,11 @@
-# F:\dev\sigaf-novo\core\views\admin_views.py (ATUALIZADO)
+# F:\dev\sigaf-novo\core\views\admin_views.py
+# (COMPLETO E CORRIGIDO - Fix do Erro 500 na edição e Nova View de Reativação)
 
 import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST # Importante adicionar require_POST
 from django.db.models import Q
 from core.models import Usuario, Unidade, LogAuditoria, FolhaPonto
 from core.forms import UnidadeForm, AdminAgenteCreationForm, AdminAgenteChangeForm, \
@@ -168,6 +170,7 @@ def inativar_unidade_view(request, unidade_id):
     }
     return render(request, 'core/admin_excluir_unidade_confirm.html', context)
 
+
 @admin_required
 def listar_agentes_view(request):
     agentes_ordenados = sorted(Usuario.objects.filter(perfil='Agente de Pessoal'), key=lambda u: u.nome)
@@ -248,7 +251,7 @@ def editar_agente_view(request, agente_id):
                 }
             
             if mudancas_status or mudancas_unidades_atuacao: 
-                registrar_log(request, 'AGENTE_EDITADO', { 
+                registrar_log(request, 'AGENTE_EDITADO', {
                     'agente_id': agente.id,
                     'agente_nome': agente.nome,
                     'mudancas_status': mudancas_status, 
@@ -295,10 +298,10 @@ def inativar_agente_view(request, agente_id):
         return redirect('core:listar_agentes')
     return render(request, 'core/admin_inativar_agente_confirm.html', {'agente': agente})
 
+
 @admin_required
 def listar_usuarios_view(request):
     search_query = request.GET.get('q', '')
-    # CORREÇÃO: .all() em vez de .filter(ativo=True) para ver inativos e poder reativá-los
     usuarios_queryset = Usuario.objects.all()
 
     if search_query:
@@ -327,7 +330,7 @@ def adicionar_usuario_admin_view(request):
         form = AdminUsuarioCreationForm(request.POST)
         if form.is_valid():
             novo_usuario = form.save()
-            registrar_log(request, 'USER_CREATE_BY_ADMIN', {
+            registrar_log(request, 'USER_CREATE_BY_ADMIN', { 
                 'novo_usuario_id': novo_usuario.id,
                 'novo_usuario_nome': novo_usuario.nome,
                 'novo_usuario_id_funcional': novo_usuario.id_funcional,
@@ -378,6 +381,7 @@ def editar_usuario_admin_view(request, usuario_id):
             
             unidades_atuacao_novas_ids = set(usuario.unidades_atuacao.all().values_list('id', flat=True))
 
+            # CORREÇÃO DO ERRO 500 AQUI: Inicializando a variável antes do if
             mudancas_unidades_atuacao = {}
             if unidades_atuacao_antigas_ids != unidades_atuacao_novas_ids:
                 unidades_adicionadas = [str(Unidade.objects.get(id=uid).nome_unidade) for uid in (unidades_atuacao_novas_ids - unidades_atuacao_antigas_ids)]
@@ -388,7 +392,7 @@ def editar_usuario_admin_view(request, usuario_id):
                 }
 
             if mudancas or mudancas_unidades_atuacao:
-                registrar_log(request, 'USER_EDIT_BY_ADMIN', {
+                registrar_log(request, 'USER_EDIT_BY_ADMIN', { 
                     'usuario_id': usuario.id,
                     'usuario_nome': usuario.nome,
                     'mudancas': mudancas,
@@ -434,6 +438,26 @@ def inativar_usuario_admin_view(request, usuario_id):
         form = InativarUsuarioForm()
 
     return render(request, 'core/admin_inativar_usuario_confirm.html', {'usuario': usuario, 'form': form})
+
+# NOVA VIEW: Reativar Usuário (Admin)
+@admin_required
+@require_POST
+def reativar_usuario_admin_view(request, usuario_id):
+    usuario = get_object_or_404(Usuario, id=usuario_id, ativo=False)
+    
+    usuario.ativo = True
+    usuario.status_servidor = 'Ativo'
+    usuario.data_inativacao = None
+    usuario.save()
+
+    registrar_log(request, 'USUARIO_ATIVADO', {
+        'usuario_id': usuario.id,
+        'usuario_nome': usuario.nome,
+        'status_novo': 'Ativo'
+    })
+    messages.success(request, f"Usuário '{usuario.nome}' reativado com sucesso.")
+    return redirect('core:listar_usuarios')
+
 
 @admin_required
 def deletar_usuario_permanente_view(request, usuario_id):

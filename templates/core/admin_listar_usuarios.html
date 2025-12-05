@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/datatables-rowgroup/css/rowGroup.bootstrap4.min.css' %}">
-    {# Se você usava DataTables Buttons ou outros plugins, adicione os CSS deles aqui #}
 {% endblock %}
 
 {% block content %}
@@ -29,14 +28,14 @@
         </div>
     </div>
     <div class="card-body">
-        {% if usuarios_por_lotacao %} {# Verifica se há qualquer grupo para exibir #}
+        {% if usuarios_por_lotacao %}
             <div class="table-responsive">
                 <table id="servidoresTable" class="table table-bordered table-striped table-sm">
                     <thead>
                         <tr>
                             <th>Nome</th>
                             <th>ID Funcional</th>
-                            <th>Lotação</th> {# COLUNA QUE SERÁ AGRUPADA #}
+                            <th>Lotação</th> 
                             <th>Cargo</th>
                             <th>Status</th>
                             <th>Ações</th>
@@ -44,7 +43,7 @@
                     </thead>
                     <tbody>
                         {% for lotacao_nome, usuarios_na_lotacao in usuarios_por_lotacao.items %}
-                        <tr class="bg-light"> {# Estilo para o cabeçalho do grupo #}
+                        <tr class="bg-light"> 
                             <td colspan="6" class="font-weight-bold text-primary">
                                 Lotação: {{ lotacao_nome }}
                             </td>
@@ -53,13 +52,13 @@
                         <tr>
                             <td>{{ usuario.nome }}</td>
                             <td>{{ usuario.id_funcional }}</td>
-                            <td>{{ usuario.lotacao.nome_unidade|default:"N/A" }}</td> {# Exibe a lotação na coluna, mesmo que não visível #}
+                            <td>{{ usuario.lotacao.nome_unidade|default:"N/A" }}</td> 
                             <td>
                                 <span class="badge 
                                     {% if usuario.perfil == 'Administrador Geral' %}badge-dark
                                     {% elif usuario.perfil == 'Agente de Pessoal' %}badge-info
                                     {% elif usuario.perfil == 'Delegado de Polícia' %}badge-warning
-                                    {% elif usuario.perfil == 'Conferente' %}badge-primary {# NOVO #}
+                                    {% elif usuario.perfil == 'Conferente' %}badge-primary
                                     {% else %}badge-secondary{% endif %}">
                                     {{ usuario.perfil }}
                                 </span>
@@ -68,11 +67,10 @@
                                 {% if usuario.ativo %}
                                     <span class="badge badge-success">Ativo</span>
                                 {% else %}
-                                    <span class="badge badge-danger">Inativo</span>
+                                    <span class="badge badge-danger">Inativo ({{ usuario.status_servidor }})</span>
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                {# Lógica condicional para botões de ação baseada no perfil #}
                                 {% if usuario.perfil == 'Administrador Geral' %}
                                     <button class="btn btn-sm btn-light" title="Gerenciado via Django Admin" disabled><i class="fas fa-user-cog"></i></button>
                                 {% elif usuario.perfil == 'Agente de Pessoal' %}
@@ -80,7 +78,7 @@
                                     <form action="{% url 'core:inativar_agente' usuario.id %}" method="post" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm {% if usuario.ativo %}btn-warning{% else %}btn-success{% endif %}" 
-                                            title="{% if usuario.ativo %}Inativar Agente{% else %}Ativar Agente{% endif %}">
+                                             title="{% if usuario.ativo %}Inativar Agente{% else %}Ativar Agente{% endif %}">
                                             {% if usuario.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
                                         </button>
                                     </form>
@@ -89,35 +87,43 @@
                                     <form action="{% url 'core:inativar_delegado' usuario.id %}" method="post" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm {% if usuario.ativo %}btn-warning{% else %}btn-success{% endif %}" 
-                                            title="{% if usuario.ativo %}Inativar Delegado{% else %}Ativar Delegado{% endif %}">
+                                             title="{% if usuario.ativo %}Inativar Delegado{% else %}Ativar Delegado{% endif %}">
                                             {% if usuario.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
                                         </button>
                                     </form>
-                                {% else %} {# Servidor Comum (qualquer cargo policial) e Conferente #}
+                                {% else %} 
+                                    {# AQUI ESTÁ A MUDANÇA: Se ativo, Inativar. Se inativo, Reativar. #}
                                     <a href="{% url 'core:editar_usuario_admin' usuario.id %}" class="btn btn-sm btn-info" title="Editar Servidor"><i class="fas fa-edit"></i></a>
-                                    <form action="{% url 'core:inativar_usuario_admin' usuario.id %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm {% if usuario.ativo %}btn-warning{% else %}btn-success{% endif %}" 
-                                            title="{% if usuario.ativo %}Inativar Usuário{% else %}Ativar Usuário{% endif %}">
-                                            {% if usuario.ativo %}<i class="fas fa-user-slash"></i>{% else %}<i class="fas fa-user-check"></i>{% endif %}
-                                        </button>
-                                    </form>
+                                    
+                                    {% if usuario.ativo %}
+                                        <form action="{% url 'core:inativar_usuario_admin' usuario.id %}" method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-warning" title="Inativar Usuário">
+                                                <i class="fas fa-user-slash"></i>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form action="{% url 'core:reativar_usuario_admin' usuario.id %}" method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success" title="Reativar Usuário">
+                                                <i class="fas fa-user-check"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 {% endif %}
                                 
-                                {# Botão de Histórico de Folhas, disponível para todos os tipos (exceto Admin Geral, que não tem folha) #}
                                 {% if not usuario.is_administrador_geral %}
                                 <a href="{% url 'core:admin_historico_folhas' usuario.id %}" class="btn btn-sm btn-secondary" title="Histórico de Folhas"><i class="fas fa-history"></i></a>
                                 {% endif %}
 
-                                {# Botão de deletar permanentemente - Disponível para Admin Geral para todos, mas não para ele mesmo #}
                                 {% if request.user.is_administrador_geral and request.user != usuario %}
                                 <a href="{% url 'core:deletar_usuario_permanente' usuario.id %}" class="btn btn-sm btn-danger" title="Excluir Usuário Permanentemente"
-                                   onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente o usuário e todos os dados relacionados (folhas, assinaturas, conferências)! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
+                                   onclick="return confirm('ATENÇÃO: Esta ação excluirá permanentemente o usuário e todos os dados relacionados! Tem certeza?');"><i class="fas fa-trash-alt"></i></a>
                                 {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
-                        {% endfor %} {# Fecha o loop externo de lotacao_nome, usuarios_na_lotacao #}
+                        {% endfor %} 
                     </tbody>
                 </table>
             </div>
@@ -136,28 +142,26 @@
     <script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-rowgroup/js/dataTables.rowGroup.min.js' %}"></script>
-    {# Certifique-se de que o arquivo de idioma do DataTables está no local correto #}
-    {# Ex: sigaf-novo/static/plugins/datatables/Portuguese-Brasil.json #}
     <script>
         $(function () {
             $('#servidoresTable').DataTable({
                 "paging": true,
                 "lengthChange": true,
-                "searching": true,    // Ativa a barra de busca do DataTables
-                "ordering": true,     // Ativa a ordenação por colunas
-                "info": true,         // Exibe informações de paginação
+                "searching": true,    
+                "ordering": true,     
+                "info": true,         
                 "autoWidth": false,
-                "responsive": true,   // Torna a tabela responsiva
+                "responsive": true,   
                 "language": {
                     "url": "{% static 'plugins/datatables/Portuguese-Brasil.json' %}"
                 },
-                "order": [[2, 'asc'], [0, 'asc']], // ORDENAÇÃO: Primeiro pela 3ª coluna (Lotação), depois pela 1ª (Nome)
+                "order": [[2, 'asc'], [0, 'asc']], 
                 "rowGroup": {
-                    dataSrc: 2 // AGRUPAMENTO: Agrupa pela 3ª coluna (Lotação)
+                    dataSrc: 2 
                 },
                 "columnDefs": [
-                    { "orderable": false, "targets": [5] }, // Desabilita ordenação para a coluna de Ações
-                    { "targets": [2], "visible": false } // ESCONDE: Esconde a coluna de Lotação, pois ela será usada apenas para o agrupamento
+                    { "orderable": false, "targets": [5] }, 
+                    { "targets": [2], "visible": false } 
                 ]
             });
         });
