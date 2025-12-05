@@ -16,9 +16,13 @@ from core.forms import GerarPdfUnidadeForm
 from core.utils import preparar_dados_para_pdf, get_meses_trimestre, MESES_PT_BR
 
 def agente_required(view_func):
+    """
+    Decorator para garantir que o usuário logado tem o perfil de Agente de Pessoal
+    OU é um Administrador Geral (permissão concedida para gerar PDFs).
+    """
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        if request.user.perfil != 'Agente de Pessoal':
+        if request.user.perfil not in ['Agente de Pessoal', 'Administrador Geral']:
             messages.error(request, "Você não tem permissão para acessar esta página.")
             return redirect('core:agente_dashboard')
         return view_func(request, *args, **kwargs)
@@ -33,13 +37,19 @@ def gerar_pdf_unidade_view(request):
             ano = form.cleaned_data['ano']
             trimestre = int(form.cleaned_data['trimestre'])
             
-            folhas = FolhaPonto.objects.filter(
-                servidor__lotacao=unidade, 
-                servidor__ativo=True,
-                servidor__lotacao__in=request.user.unidades_atuacao.all(), # CORRIGIDO AQUI: unidades_gerenciadas -> unidades_atuacao [cite: 1510]
-                ano=ano, 
-                trimestre=trimestre
-            ).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome')
+            # Construção dos filtros base
+            filters = {
+                'servidor__lotacao': unidade, 
+                'servidor__ativo': True,
+                'ano': ano, 
+                'trimestre': trimestre
+            }
+
+            # Se NÃO for Administrador Geral, restringe pela unidade de atuação
+            if request.user.perfil != 'Administrador Geral':
+                 filters['servidor__lotacao__in'] = request.user.unidades_atuacao.all()
+
+            folhas = FolhaPonto.objects.filter(**filters).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome')
 
             if not folhas.exists(): 
                 messages.error(request, "Nenhuma folha de ponto encontrada para os filtros selecionados ou você não tem permissão para gerar o PDF desta unidade/período.")
@@ -58,15 +68,15 @@ def gerar_pdf_unidade_view(request):
                 })
             
             imagem_uri = request.build_absolute_uri(settings.STATIC_URL + 'img/logo_pcerj.jpg')
-            
-            # ALTERAÇÃO AQUI: Passando o nome do trimestre para o contexto
+        
+            # Passando o nome do trimestre para o contexto
             trimestre_display_name = dict(FolhaPonto.TRIMESTRE_CHOICES).get(trimestre)
 
             context = {
                 'dados_relatorio': dados_relatorio,
                 'unidade': unidade,
                 'ano': ano,
-                'trimestre_display': trimestre_display_name, # Variável adicionada
+                'trimestre_display': trimestre_display_name, 
                 'imagem_path': imagem_uri,
                 'titulo_pdf': f"Relatório de Frequência - {unidade.nome_unidade}"
             }
@@ -86,9 +96,15 @@ def gerar_pdf_unidade_view(request):
 def gerar_pdf_individual_view(request, folha_id):
     folha = get_object_or_404(FolhaPonto, id=folha_id)
     
-    # CORRIGIDO AQUI: unidades_gerenciadas -> unidades_atuacao 
-    if request.user != folha.servidor and \
-       not (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all()):
+    # Lógica de Permissão Atualizada:
+    # 1. O próprio servidor
+    # 2. Um Agente de Pessoal que tem a unidade do servidor nas suas unidades de atuação
+    # 3. O Administrador Geral (NOVO)
+    is_proprio_servidor = (request.user == folha.servidor)
+    is_agente_autorizado = (request.user.perfil == 'Agente de Pessoal' and folha.servidor.lotacao in request.user.unidades_atuacao.all())
+    is_admin_geral = (request.user.perfil == 'Administrador Geral')
+
+    if not (is_proprio_servidor or is_agente_autorizado or is_admin_geral):
         messages.error(request, "Você não tem permissão para gerar este PDF.")
         return redirect('core:dashboard')
     

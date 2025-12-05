@@ -1,4 +1,4 @@
-# ARQUIVO: core/views/agente/folha_ponto_views.py (CORRIGIDO - Erro 405)
+# ARQUIVO: core/views/agente/folha_ponto_views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -16,11 +16,12 @@ from django.db import transaction
 
 def agente_required(view_func):
     """
-    Decorator para garantir que o usuário logado tem o perfil de Agente de Pessoal.
+    Decorator para garantir que o usuário logado tem o perfil de Agente de Pessoal
+    OU é um Administrador Geral (permissão concedida para gestão).
     """
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        if request.user.perfil != 'Agente de Pessoal':
+        if request.user.perfil not in ['Agente de Pessoal', 'Administrador Geral']:
             messages.error(request, "Você não tem permissão para acessar esta página.")
             return redirect('core:login')
         return view_func(request, *args, **kwargs)
@@ -245,13 +246,17 @@ def bloquear_dias_em_lote_view(request, folha_id):
 @agente_required
 def agente_criar_folha_view(request):
     """
-    Permite ao Agente de Pessoal criar uma nova folha de ponto manualmente.
+    Permite ao Agente de Pessoal (ou Admin) criar uma nova folha de ponto manualmente.
     """
     initial_servidor = request.GET.get('usuario_id')
     initial_data = {}
     if initial_servidor:
         try:
-            servidor_obj = Usuario.objects.get(id=initial_servidor, lotacao__in=request.user.unidades_atuacao.all())
+            # Se for Admin, busca qualquer usuário. Se for Agente, restringe à lotação.
+            if request.user.perfil == 'Administrador Geral':
+                servidor_obj = Usuario.objects.get(id=initial_servidor)
+            else:
+                servidor_obj = Usuario.objects.get(id=initial_servidor, lotacao__in=request.user.unidades_atuacao.all())
             initial_data['servidor'] = servidor_obj
         except Usuario.DoesNotExist:
             messages.warning(request, "Servidor pré-selecionado não encontrado ou não pertence às suas unidades de atuação.")
@@ -273,7 +278,7 @@ def agente_criar_folha_view(request):
                         'trimestre': folha.trimestre,
                         'ano': folha.ano,
                         'unidade_geracao': folha.unidade_id_geracao.nome_unidade if folha.unidade_id_geracao else 'N/A',
-                        'motivo': 'Criação Manual por Agente'
+                        'motivo': 'Criação Manual por Agente/Admin'
                     })
                     return redirect('core:gerenciar_ponto', folha_id=folha.id)
             except Exception as e:
@@ -316,7 +321,7 @@ def agente_deletar_folha_view(request, folha_id):
                 'servidor_nome': servidor_nome,
                 'folha_periodo': periodo,
                 'folha_id': folha_id_log,
-                'acao_por': 'Agente (Exclusão Permanente)'
+                'acao_por': 'Agente/Admin (Exclusão Permanente)'
             })
             return redirect('core:agente_historico_folhas', usuario_id=servidor_id)
             
@@ -396,6 +401,8 @@ def desarquivar_folha_view(request, folha_id):
 def arquivar_lote_view(request):
     """
     Permite ao Agente de Pessoal arquivar todas as folhas 'Concluídas' nas suas unidades de atuação.
+    OBS: O Admin Geral não costuma usar esta função pois ele não tem "unidades de atuação" definidas para si,
+    então a query retornará vazio para Admin, o que é seguro. Se o Admin precisar, ele deve usar a gestão individual.
     """
     agente = request.user
     
@@ -443,13 +450,19 @@ def arquivar_lote_view(request):
 def folhas_arquivadas_view(request):
     """
     Exibe todas as folhas de ponto arquivadas para as unidades de atuação do Agente de Pessoal.
+    Se for Admin Geral, exibe as folhas arquivadas de TODO o sistema (pode ser muito, mas por enquanto ok).
     """
-    agente = request.user
-
-    folhas_arquivadas_queryset = FolhaPonto.objects.filter(
-        servidor__lotacao__in=agente.unidades_atuacao.all(),
-        status='Arquivada'
-    ).select_related('servidor', 'unidade_id_geracao').order_by('-ano', '-trimestre', 'servidor__nome')
+    usuario = request.user
+    
+    if usuario.perfil == 'Administrador Geral':
+         folhas_arquivadas_queryset = FolhaPonto.objects.filter(
+            status='Arquivada'
+        ).select_related('servidor', 'unidade_id_geracao').order_by('-ano', '-trimestre', 'servidor__nome')
+    else:
+        folhas_arquivadas_queryset = FolhaPonto.objects.filter(
+            servidor__lotacao__in=usuario.unidades_atuacao.all(),
+            status='Arquivada'
+        ).select_related('servidor', 'unidade_id_geracao').order_by('-ano', '-trimestre', 'servidor__nome')
 
     folhas_por_ano = {}
     for folha in folhas_arquivadas_queryset:
