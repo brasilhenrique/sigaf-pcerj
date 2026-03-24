@@ -54,6 +54,17 @@ urlpatterns = [
     path('admin_geral/usuarios/adicionar/', admin_views.adicionar_usuario_admin_view, name='adicionar_usuario_admin'),
     path('admin_geral/usuarios/editar/<int:usuario_id>/', admin_views.editar_usuario_admin_view, name='editar_usuario_admin'),
     path('admin_geral/usuarios/inativar/<int:usuario_id>/', admin_views.inativar_usuario_admin_view, name='inativar_usuario_admin'),
+
+    path('admin-geral/cargos/', admin_views.listar_cargos_view, name='admin_geral_cargos'),
+    path('admin-geral/cargos/adicionar/', admin_views.adicionar_cargo_view, name='admin_geral_adicionar_cargo'),
+    path('admin-geral/cargos/editar/<int:cargo_id>/', admin_views.editar_cargo_view, name='admin_geral_editar_cargo'),
+    path('admin-geral/cargos/alternar-status/<int:cargo_id>/', admin_views.alternar_status_cargo_view, name='admin_geral_alternar_status_cargo'),
+
+    # Admin Geral - Códigos de Ocorrência
+    path('admin-geral/codigos/', admin_views.listar_codigos_view, name='admin_geral_codigos'),
+    path('admin-geral/codigos/adicionar/', admin_views.adicionar_codigo_view, name='admin_geral_adicionar_codigo'),
+    path('admin-geral/codigos/editar/<int:codigo_id>/', admin_views.editar_codigo_view, name='admin_geral_editar_codigo'),
+    path('admin-geral/codigos/alternar-status/<int:codigo_id>/', admin_views.alternar_status_codigo_view, name='admin_geral_alternar_status_codigo'),
     
     # NOVA ROTA DE REATIVAÇÃO ADMIN
     path('admin_geral/usuarios/reativar/<int:usuario_id>/', admin_views.reativar_usuario_admin_view, name='reativar_usuario_admin'),
@@ -64,12 +75,12 @@ urlpatterns = [
     path('admin_geral/gerar_folhas_lote/', admin_views.gerar_folhas_trimestrais_manual_view, name='gerar_folhas_lote'),
 
     path('admin_geral/delegados/', delegado_gerenciamento_views.listar_delegados_view, name='listar_delegados'),
-    path('admin_geral/delegados/adicionar/', delegado_gerenciamento_views.adicionar_delegado_view, name='adicionar_delegado'),
     path('admin_geral/delegados/editar/<int:delegado_id>/', delegado_gerenciamento_views.editar_delegado_view, name='editar_delegado'),
     path('admin_geral/delegados/inativar/<int:delegado_id>/', delegado_gerenciamento_views.inativar_delegado_view, name='inativar_delegado'),
 
     # Agente de Pessoal
     path('agente/dashboard/', agente_dashboard_views.agente_dashboard_view, name='agente_dashboard'),
+    path('agente/configurar_unidades/', agente_dashboard_views.configurar_unidades_view, name='configurar_unidades'),
     path('agente/usuarios/adicionar/', agente_usuario_views.adicionar_usuario_view, name='adicionar_usuario'),
     path('agente/usuarios/editar/<int:usuario_id>/', agente_usuario_views.editar_usuario_view, name='editar_usuario'),
     path('agente/usuarios/inativar/<int:usuario_id>/', agente_usuario_views.inativar_usuario_view, name='inativar_usuario'),
@@ -102,6 +113,8 @@ urlpatterns = [
     path('delegado/folhas/conferir_mes/<int:folha_id>/<int:mes_num>/', delegado_views.delegado_conferir_mes_view, name='delegado_conferir_mes'),
     path('delegado/folhas/desfazer_mes/<int:folha_id>/<int:mes_num>/', delegado_views.desfazer_conferencia_mes_view, name='desfazer_conferencia_mes'),
     path('delegado/busca/', delegado_views.delegado_busca_view, name='delegado_busca'),
+    path('delegado/folhas/conferir_lote/', delegado_views.conferir_lote_view, name='delegado_conferir_lote'),
+    path('delegado/folhas/conferir_rapido/<int:folha_id>/', delegado_views.conferir_folha_rapido_view, name='delegado_conferir_folha_rapido'),
 
     # Meu Histórico
     path('meu_historico/', servidor_views.meu_historico_folhas_view, name='meu_historico_folhas'), 

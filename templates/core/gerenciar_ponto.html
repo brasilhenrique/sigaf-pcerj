@@ -110,20 +110,17 @@
                                             {% csrf_token %}
                                             <input type="hidden" name="dia_id" value="{{ dia.id }}">
                                             <input type="hidden" name="folha_id" value="{{ folha_ponto.id }}">
-                                            <select name="codigo" class="form-control form-control-sm flex-grow-1">
-                                                {% for codigo in codigos_ocorrencia %}
-                                                    <option value="{{ codigo.id }}" {% if codigo.id == dia.codigo.id %}selected{% endif %}>
-                                                        {% if codigo.codigo == 'LIVRE' or codigo.codigo == 'SÁBADO' or codigo.codigo == 'DOMINGO' %}
-                                                            {{ codigo.denominacao }}
-                                                        {% else %}
-                                                            CÓDIGO {{ codigo.codigo }} - {{ codigo.denominacao }}
-                                                        {% endif %}
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                            <button type="submit" class="btn btn-xs btn-primary ml-1" title="Salvar alteração do dia">
-                                                <i class="fas fa-save"></i>
-                                            </button>
+                                            <select name="codigo" class="form-control form-control-sm flex-grow-1" onchange="this.form.submit()">
+    {% for codigo in codigos_ocorrencia %}
+        <option value="{{ codigo.id }}" {% if codigo.id == dia.codigo.id %}selected{% endif %}>
+            {% if codigo.codigo == 'LIVRE' or codigo.codigo == 'SÁBADO' or codigo.codigo == 'DOMINGO' %}
+                {{ codigo.denominacao }}
+            {% else %}
+                CÓDIGO {{ codigo.codigo }} - {{ codigo.denominacao }}
+            {% endif %}
+        </option>
+    {% endfor %}
+</select>
                                         </form>
                                         {% else %} {# Se não puder editar, apenas exibe a ocorrência #}
                                             <span class="form-control form-control-sm border-0">{{ dia.codigo.denominacao }}</span>
@@ -185,9 +182,13 @@
                         <select name="codigo_lote" id="codigo_lote" class="form-control" required>
                             <option value="" selected disabled>--- Selecione uma ocorrência ---</option>
                             {% for codigo in codigos_ocorrencia %}
-                                {% if codigo.codigo.lower not in "livre,sábado,domingo" %}
-                                <option value="{{ codigo.id }}">{{ codigo.denominacao }} - CÓDIGO {{ codigo.codigo }}</option>
-                                {% endif %}
+                                <option value="{{ codigo.id }}">
+                                    {% if codigo.codigo == 'LIVRE' or codigo.codigo == 'SÁBADO' or codigo.codigo == 'DOMINGO' %}
+                                        {{ codigo.denominacao }}
+                                    {% else %}
+                                        {{ codigo.denominacao }} - CÓDIGO {{ codigo.codigo }}
+                                    {% endif %}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>

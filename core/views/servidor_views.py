@@ -1,4 +1,4 @@
-# F:\dev\sigaf-novo\core\views\servidor_views.py (COMPLETO E MODIFICADO para redirecionamento de Servidor-Conferente)
+# F:\dev\sigaf-novo\core\views\servidor_views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -17,31 +17,19 @@ def dashboard_view(request):
     Dashboard principal. Exibe a folha de ponto pessoal para assinatura.
     Redireciona perfis funcionais para seus dashboards, exceto quando acessam explicitamente 'Minha Folha de Ponto'.
     """
-    # Redireciona Administrador Geral para seu dashboard
     if request.user.perfil == 'Administrador Geral':
         return redirect('core:admin_geral_dashboard')
     
-    # Se o usuário é Agente de Pessoal e NÃO está acessando a URL de 'Minha Folha de Ponto' explicitamente,
-    # redireciona para o dashboard do agente. Caso contrário, ele prossegue para ver sua folha.
     if request.user.perfil == 'Agente de Pessoal' and request.resolver_match.url_name != 'agente_minha_folha':
         return redirect('core:agente_dashboard')
 
-    # Redireciona Delegados e Servidores-Conferentes para o dashboard de conferência,
-    # A MENOS que estejam acessando explicitamente a sua própria folha de ponto.
-    # Lógica para "Servidor-Conferente": é um usuário que NÃO é Admin Geral ou Agente,
-    # mas TEM unidades de atuação atribuídas (indicando responsabilidade de conferência)
-    # e não é um Delegado (que já é tratado por sua própria propriedade).
     is_servidor_conferente = request.user.unidades_atuacao.exists() and \
                              not request.user.is_agente_pessoal and \
                              not request.user.is_administrador_geral and \
-                             not request.user.is_delegado # Garantir que não seja delegado
+                             not request.user.is_delegado
 
     if (request.user.perfil == 'Delegado de Polícia' or is_servidor_conferente) and request.resolver_match.url_name != 'delegado_minha_folha':
-        return redirect('core:delegado_dashboard') # Redireciona para o dashboard de pendências
-
-    # Se chegou aqui, o usuário é um 'Servidor' (cargo policial sem atribuições extras),
-    # ou um Agente de Pessoal/Delegado/Servidor-Conferente acessando **sua própria folha**
-    # via o link "Minha Folha de Ponto" (que é a tela padrão do dashboard).
+        return redirect('core:delegado_dashboard')
 
     hoje = date.today()
     trimestre_atual = (hoje.month - 1) // 3 + 1
@@ -65,16 +53,15 @@ def dashboard_view(request):
         for mes_data in meses_preparados_para_web:
             mes_dias = mes_data['dias']
             
+            # Ajuste: Só permite assinar o mês inteiro se houver dias pendentes e que JÁ CHEGARAM (<= hoje)
             mes_data['pode_assinar_mes'] = any(
-                d.codigo.codigo.lower() == 'livre' and not d.servidor_assinou and not d.delegado_conferiu
+                d.codigo.codigo.lower() == 'livre' and not d.servidor_assinou and not d.delegado_conferiu and d.data_dia <= hoje
                 for d in mes_dias
             )
             mes_data['totalmente_assinado'] = all(
                 (d.servidor_assinou or d.codigo.codigo.lower() != 'livre') and not d.delegado_conferiu
                 for d in mes_dias
             )
-            # Para a própria folha, a conferência do delegado não é um impedimento total
-            # Mas podemos indicar se há dias já conferidos pelo próprio usuário
             mes_data['totalmente_conferido'] = all(d.delegado_conferiu for d in mes_dias)
    
         folhas_com_dados.append({
@@ -83,7 +70,8 @@ def dashboard_view(request):
         })
 
     context = {
-        'folhas_com_dados': folhas_com_dados
+        'folhas_com_dados': folhas_com_dados,
+        'hoje': hoje # <--- INJEÇÃO DA DATA PARA O TEMPLATE AQUI
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -99,6 +87,11 @@ def assinar_dia_view(request):
         messages.error(request, "Você não tem permissão para assinar este dia.")
         return redirect(next_url)
     
+    # <--- TRAVA DE SEGURANÇA BACKEND PARA DIAS FUTUROS AQUI --->
+    if dia.data_dia > date.today():
+        messages.error(request, "Você não pode assinar o ponto em dias futuros.")
+        return redirect(next_url)
+
     if dia.codigo.codigo.lower() != 'livre':
         messages.error(request, f"Não é possível assinar o dia {dia.data_dia.strftime('%d/%m')} pois ele está com ocorrência: {dia.codigo.denominacao}.")
         return redirect(next_url)
@@ -151,6 +144,7 @@ def desfazer_assinatura_view(request):
 def assinar_mes_inteiro_view(request, folha_id, mes_num):
     folha = get_object_or_404(FolhaPonto, id=folha_id, servidor=request.user)
     next_url = request.POST.get('next', 'core:dashboard') 
+    hoje = date.today()
     
     num_dias_no_mes = calendar.monthrange(folha.ano, mes_num)[1]
     
@@ -159,9 +153,10 @@ def assinar_mes_inteiro_view(request, folha_id, mes_num):
         data_dia_completa = date(folha.ano, mes_num, dia_num)
         try:
             dia = DiaPonto.objects.get(folha=folha, data_dia=data_dia_completa)
-            if dia.codigo.codigo.lower() == 'livre' and not dia.servidor_assinou and not dia.delegado_conferiu:
+            # <--- TRAVA DE SEGURANÇA BACKEND: dia.data_dia <= hoje --->
+            if dia.data_dia <= hoje and dia.codigo.codigo.lower() == 'livre' and not dia.servidor_assinou and not dia.delegado_conferiu:
                 dia.servidor_assinou = True
-                dia.data_assinatura_servidor = date.today()
+                dia.data_assinatura_servidor = hoje
                 dia.save()
                 dias_assinados_count += 1
         except DiaPonto.DoesNotExist:
@@ -172,7 +167,7 @@ def assinar_mes_inteiro_view(request, folha_id, mes_num):
     if dias_assinados_count > 0:
         messages.success(request, f"{dias_assinados_count} dia(s) do mês foram assinados com sucesso!")
     else:
-        messages.info(request, "Nenhum dia 'Livre' pendente encontrado para assinar neste mês ou todos já foram conferidos.")
+        messages.info(request, "Nenhum dia 'Livre' válido/passado encontrado para assinar neste mês.")
 
     return redirect(next_url)
 
@@ -199,15 +194,11 @@ def desfazer_mes_inteiro_view(request, folha_id, mes_num):
 
     return redirect(next_url)
 
-# NOVO: View para "Meu Histórico de Folhas"
+
 @login_required
 def meu_historico_folhas_view(request):
-    """
-    Exibe todas as folhas de ponto do usuário logado, independentemente do status.
-    """
     usuario = request.user
     
-    # Exclui o Administrador Geral desta view
     if usuario.perfil == 'Administrador Geral':
         messages.error(request, "Acesso negado. Administradores Gerais não possuem histórico de folhas nesta interface.")
         return redirect('core:admin_geral_dashboard')

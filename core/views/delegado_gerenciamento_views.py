@@ -46,37 +46,6 @@ def listar_delegados_view(request):
     })
 
 @admin_required
-def adicionar_delegado_view(request):
-    if request.method == 'POST':
-        form = AdminDelegadoCreationForm(request.POST)
-        if form.is_valid():
-            novo_delegado = form.save() 
-            
-            registrar_log(request, 'DELEGADO_CRIADO', {
-                'delegado_id': novo_delegado.id,
-                'delegado_nome': novo_delegado.nome,
-                'delegado_id_funcional': novo_delegado.id_funcional,
-                'lotacao': novo_delegado.lotacao.nome_unidade if novo_delegado.lotacao else 'N/A',
-                'unidades_atuacao_ids': list(novo_delegado.unidades_atuacao.all().values_list('id', flat=True)) 
-            })
-            messages.success(request, 'Delegado de Polícia criado com sucesso!')
-            return redirect('core:listar_delegados')
-        else:
-            print("Erros do formulário:", form.errors) 
-            messages.error(request, 'Erro ao adicionar delegado. Por favor, corrija os erros no formulário.')
-            return render(request, 'core/admin_form_delegado.html', {
-                'form': form,
-                'titulo': 'Adicionar Novo Delegado'
-            })
-    else:
-        form = AdminDelegadoCreationForm()
-    
-    return render(request, 'core/admin_form_delegado.html', {
-        'form': form,
-        'titulo': 'Adicionar Novo Delegado'
-    })
-
-@admin_required
 def editar_delegado_view(request, delegado_id):
     delegado = get_object_or_404(Usuario, id=delegado_id, perfil='Delegado de Polícia')
     if request.method == 'POST':

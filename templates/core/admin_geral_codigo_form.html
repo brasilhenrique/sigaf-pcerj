@@ -1,0 +1,62 @@
+{% extends 'base_adminlte.html' %}
+
+{% block page_title %}{{ acao }} Código de Ocorrência{% endblock %}
+{% block page_title_header %}{{ acao }} Código de Ocorrência{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-tags mr-2"></i> Dados do Código</h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.codigo.id_for_label }}">Sigla/Código</label>
+                                {{ form.codigo }}
+                                {% if form.codigo.errors %}
+                                    <div class="text-danger small mt-1">{{ form.codigo.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="{{ form.denominacao.id_for_label }}">Denominação (Nome)</label>
+                                {{ form.denominacao }}
+                                {% if form.denominacao.errors %}
+                                    <div class="text-danger small mt-1">{{ form.denominacao.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.descricao_completa.id_for_label }}">Descrição Completa / Regras de Uso (Opcional)</label>
+                        {{ form.descricao_completa }}
+                        {% if form.descricao_completa.errors %}
+                            <div class="text-danger small mt-1">{{ form.descricao_completa.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch custom-control-lg mt-3" style="transform: scale(1.1); transform-origin: left;">
+                            {{ form.ativo }}
+                            <label class="custom-control-label font-weight-normal" for="ativoSwitch" style="cursor: pointer;">
+                                Código Ativo no Sistema
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{% url 'core:admin_geral_codigos' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Salvar Código</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

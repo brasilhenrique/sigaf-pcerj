@@ -1,8 +1,9 @@
 # ARQUIVO: core/forms.py (COMPLETO)
 
+from core.models import CodigoOcorrencia
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm, UserChangeForm
-from .models import FolhaPonto, Usuario, Unidade, CodigoOcorrencia, Transferencia
+from .models import FolhaPonto, Usuario, Unidade, CodigoOcorrencia, Transferencia, Cargo
 from datetime import date
 import re 
 
@@ -72,7 +73,7 @@ class CriarFolhaManualForm(forms.ModelForm):
         return cleaned_data
 
 class AplicarOcorrenciaLoteForm(forms.Form):
-    codigo_lote = forms.ModelChoiceField(queryset=CodigoOcorrencia.objects.exclude(codigo__in=['Livre', 'SÁBADO', 'DOMINGO']), label="Ocorrência", empty_label="--- Selecione ---", widget=forms.Select(attrs={'class': 'form-control'}), required=True)
+    codigo_lote = forms.ModelChoiceField(queryset=CodigoOcorrencia.objects.all(), label="Ocorrência", empty_label="--- Selecione ---", widget=forms.Select(attrs={'class': 'form-control'}), required=True)
     data_inicio_lote = forms.DateField(label="Data de Início", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
     data_fim_lote = forms.DateField(label="Data de Fim", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), required=True)
 
@@ -86,7 +87,8 @@ class UsuarioCreationForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ['id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_atuacao']
+        # INCLUÍMOS O CARGO AQUI E REMOVEMOS O STATUS (nasce ativo por padrão)
+        fields = ['id_funcional', 'nome', 'email', 'cargo', 'perfil', 'lotacao', 'unidades_atuacao']
     
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
@@ -104,7 +106,15 @@ class UsuarioCreationForm(forms.ModelForm):
                 self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
         if 'perfil' in self.fields:
-            self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [('Delegado de Polícia', 'Delegado de Polícia')]
+            # A MÁGICA DOS RÓTULOS ACONTECE AQUI
+            self.fields['perfil'].choices = [
+                ('Servidor', 'Servidor Padrão (Apenas assina a própria folha)'), 
+                ('Delegado de Polícia', 'Conferente da Unidade (Assina a própria folha e confere a de terceiros)')
+            ]
+
+        if 'cargo' in self.fields:
+            # GARANTE QUE SÓ CARGOS ATIVOS APAREÇAM
+            self.fields['cargo'].queryset = Cargo.objects.filter(ativo=True).order_by('nome')
 
 
     def save(self, commit=True):
@@ -130,7 +140,8 @@ class UsuarioChangeForm(forms.ModelForm):
     )
     class Meta:
         model = Usuario
-        fields = ['nome', 'email', 'perfil', 'lotacao', 'status_servidor', 'unidades_atuacao']
+        # INCLUÍMOS O CARGO AQUI (Mantemos o status_servidor pois é a tela de edição)
+        fields = ['nome', 'email', 'cargo', 'perfil', 'lotacao', 'status_servidor', 'unidades_atuacao']
     
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
@@ -148,7 +159,14 @@ class UsuarioChangeForm(forms.ModelForm):
                 self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades_lotacao]
 
         if 'perfil' in self.fields:
-            self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [('Delegado de Polícia', 'Delegado de Polícia')]
+            # A MÁGICA DOS RÓTULOS AQUI TAMBÉM
+            self.fields['perfil'].choices = [
+                ('Servidor', 'Servidor Padrão (Apenas assina a própria folha)'), 
+                ('Delegado de Polícia', 'Conferente da Unidade (Assina a própria folha e confere a de terceiros)')
+            ]
+
+        if 'cargo' in self.fields:
+            self.fields['cargo'].queryset = Cargo.objects.filter(ativo=True).order_by('nome')
 
 
 class TransferenciaForm(forms.ModelForm):
@@ -252,7 +270,8 @@ class AdminUsuarioCreationForm(forms.ModelForm):
     )
     class Meta:
         model = Usuario
-        fields = ('id_funcional', 'nome', 'email', 'perfil', 'lotacao', 'unidades_atuacao')
+        # INCLUÍDO O CARGO
+        fields = ('id_funcional', 'nome', 'email', 'cargo', 'perfil', 'lotacao', 'unidades_atuacao')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -265,11 +284,15 @@ class AdminUsuarioCreationForm(forms.ModelForm):
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
         
         if 'perfil' in self.fields:
-            self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [
-                ('Delegado de Polícia', 'Delegado de Polícia'),
-                ('Agente de Pessoal', 'Agente de Pessoal'),
+            self.fields['perfil'].choices = [
+                ('Servidor', 'Servidor Padrão (Apenas assina a própria folha)'),
+                ('Delegado de Polícia', 'Conferente da Unidade (Assina e confere de terceiros)'),
+                ('Agente de Pessoal', 'Agente de Pessoal (RH)'),
+                ('Administrador Geral', 'Administrador Geral (TI)'),
             ]
-
+            
+        if 'cargo' in self.fields:
+            self.fields['cargo'].queryset = Cargo.objects.filter(ativo=True).order_by('nome')
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -278,6 +301,8 @@ class AdminUsuarioCreationForm(forms.ModelForm):
 
         if user.perfil not in ['Administrador Geral', 'Delegado de Polícia']:
             user.is_staff = False
+        else:
+            user.is_staff = True
 
         if commit:
             user.save()
@@ -295,22 +320,29 @@ class AdminUsuarioChangeForm(UserChangeForm):
 
     class Meta(UserChangeForm.Meta):
         model = Usuario
-        fields = ('nome', 'email', 'perfil', 'lotacao', 'ativo', 'status_servidor', 'unidades_atuacao')
+        # INCLUÍDO O CARGO E MANTIDO O STATUS
+        fields = ('nome', 'email', 'cargo', 'perfil', 'lotacao', 'ativo', 'status_servidor', 'unidades_atuacao')
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for fname, field in self.fields.items(): 
             if not isinstance(field.widget, forms.CheckboxSelectMultiple):
                 field.widget.attrs['class'] = 'form-control'
-      
+       
         if 'lotacao' in self.fields:
             sorted_unidades = sorted(Unidade.objects.filter(ativo=True), key=custom_sort_key)
             self.fields['lotacao'].choices = [(u.pk, u.nome_unidade) for u in sorted_unidades]
             
         if 'perfil' in self.fields:
-            self.fields['perfil'].choices = Usuario.POLICIA_CARGOS + [
-                ('Delegado de Polícia', 'Delegado de Polícia'),
-                ('Agente de Pessoal', 'Agente de Pessoal'),
+            self.fields['perfil'].choices = [
+                ('Servidor', 'Servidor Padrão (Apenas assina a própria folha)'),
+                ('Delegado de Polícia', 'Conferente da Unidade (Assina e confere de terceiros)'),
+                ('Agente de Pessoal', 'Agente de Pessoal (RH)'),
+                ('Administrador Geral', 'Administrador Geral (TI)'),
             ]
+            
+        if 'cargo' in self.fields:
+            self.fields['cargo'].queryset = Cargo.objects.filter(ativo=True).order_by('nome')
 
 
 class AdminProfileForm(forms.ModelForm):
@@ -390,3 +422,23 @@ class AtribuirConferenteForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['unidades_atuacao'].queryset = Unidade.objects.filter(ativo=True).order_by('nome_unidade')
+
+class CargoForm(forms.ModelForm):
+    class Meta:
+        model = Cargo
+        fields = ['nome', 'ativo']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Oficial de Polícia Civil'}),
+            'ativo': forms.CheckboxInput(attrs={'class': 'custom-control-input', 'id': 'ativoSwitch'}),
+        }
+
+class CodigoOcorrenciaForm(forms.ModelForm):
+    class Meta:
+        model = CodigoOcorrencia
+        fields = ['codigo', 'denominacao', 'descricao_completa', 'ativo']
+        widgets = {
+            'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: SV'}),
+            'denominacao': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Sem Vínculo'}),
+            'descricao_completa': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Detalhes opcionais sobre quando usar este código...'}),
+            'ativo': forms.CheckboxInput(attrs={'class': 'custom-control-input', 'id': 'ativoSwitch'}),
+        }

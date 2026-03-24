@@ -3,7 +3,12 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django import forms
-from .models import Unidade, Usuario, CodigoOcorrencia, FolhaPonto, DiaPonto, Transferencia
+from .models import Unidade, Usuario, CodigoOcorrencia, FolhaPonto, DiaPonto, Transferencia, Cargo
+
+@admin.register(Cargo)
+class CargoAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'ativo')
+    search_fields = ('nome',)
 
 class CustomUserCreationForm(forms.ModelForm):
     class Meta:

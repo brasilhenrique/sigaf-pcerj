@@ -77,11 +77,16 @@ def popular_dias_folha(folha_ponto_instance):
             data_atual = date(ano, mes, dia)
             dia_da_semana = data_atual.weekday()
             
+            # Checa se a unidade trabalha em regime de plantão
+            eh_plantao = folha_ponto_instance.unidade_id_geracao.regime_plantao if folha_ponto_instance.unidade_id_geracao else False
+            
             codigo_padrao = cod_livre
-            if dia_da_semana == 5:
-                codigo_padrao = cod_sabado
-            elif dia_da_semana == 6:
-                codigo_padrao = cod_domingo
+            # Se NÃO for plantão, aplica a regra de bloquear sábados e domingos
+            if not eh_plantao:
+                if dia_da_semana == 5:
+                    codigo_padrao = cod_sabado
+                elif dia_da_semana == 6:
+                    codigo_padrao = cod_domingo
             
             dias_a_criar.append(DiaPonto(folha=folha_ponto_instance, data_dia=data_atual, codigo=codigo_padrao))
     

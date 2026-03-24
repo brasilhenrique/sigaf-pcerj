@@ -67,13 +67,17 @@
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
         
-          {% if request.user.perfil == 'Administrador Geral' %}
+            {% if request.user.perfil == 'Administrador Geral' %}
+            {% if request.user.perfil == 'Administrador Geral' %}
             <li class="nav-item"><a href="{% url 'core:admin_geral_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_geral_dashboard' %}active{% endif %}"><i class="nav-icon fas fa-shield-alt"></i><p>Dashboard do Admin</p></a></li>
             <li class="nav-item"><a href="{% url 'core:listar_unidades' %}" class="nav-link {% if 'unidade' in request.path %}active{% endif %}"><i class="nav-icon fas fa-building"></i><p>Gestão de Unidades</p></a></li>
+            <li class="nav-item"><a href="{% url 'core:admin_geral_cargos' %}" class="nav-link {% if 'cargo' in request.path %}active{% endif %}"><i class="nav-icon fas fa-id-badge"></i><p>Gestão de Cargos</p></a></li>
+            <li class="nav-item"><a href="{% url 'core:admin_geral_codigos' %}" class="nav-link {% if 'codigo' in request.path %}active{% endif %}"><i class="nav-icon fas fa-tags"></i><p>Gestão de Códigos</p></a></li>
             <li class="nav-item"><a href="{% url 'core:listar_agentes' %}" class="nav-link {% if 'agente' in request.path and 'dashboard' not in request.path %}active{% endif %}"><i class="nav-icon fas fa-user-shield"></i><p>Gestão de Agentes</p></a></li>
             <li class="nav-item"><a href="{% url 'core:listar_usuarios' %}" class="nav-link {% if 'usuario' in request.path %}active{% endif %}"><i class="nav-icon fas fa-users-cog"></i><p>Gestão de Usuários</p></a></li>
-            <li class="nav-item"><a href="{% url 'core:listar_delegados' %}" class="nav-link {% if 'delegado' in request.path and 'dashboard' not in request.path %}active{% endif %}"><i class="nav-icon fas fa-user-tie"></i><p>Gestão de Delegados</p></a></li> {# Incluído para completar o menu #}
+            <li class="nav-item"><a href="{% url 'core:listar_delegados' %}" class="nav-link {% if 'delegado' in request.path and 'dashboard' not in request.path %}active{% endif %}"><i class="nav-icon fas fa-user-tie"></i><p>Gestão de Delegados</p></a></li>
             <li class="nav-item"><a href="{% url 'core:admin_auditoria' %}" class="nav-link {% if 'auditoria' in request.path %}active{% endif %}"><i class="nav-icon fas fa-file-contract"></i><p>Logs de Auditoria</p></a></li>
+          {% endif %}
           {% endif %}
           
           {% if request.user.perfil == 'Agente de Pessoal' %}
@@ -104,10 +108,9 @@
             <li class="nav-item"><a href="{% url 'core:delegado_busca' %}" class="nav-link {% if request.resolver_match.url_name == 'delegado_busca' %}active{% endif %}"><i class="nav-icon fas fa-search"></i><p>Busca Global</p></a></li>
           {% endif %}
 
-          {# Condição para Servidor (cargo policial) que NÃO tem atribuição de conferência #}
-          {# CORREÇÃO AQUI: Usando a propriedade `is_policia_cargo` e `is_conferente` #}
-          {% if request.user.is_policia_cargo and not request.user.is_conferente and not request.user.is_agente_pessoal and not request.user.is_delegado %} 
-            {# Servidor (cargo policial) usa o dashboard padrão como sua folha pessoal #}
+          {# Condição para Servidor Comum que NÃO tem atribuição de conferência #}
+          {% if request.user.perfil == 'Servidor' and not request.user.is_conferente %} 
+            {# Servidor comum usa o dashboard padrão como sua folha pessoal #}
             <li class="nav-item"><a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="nav-icon fas fa-user-clock"></i><p>Minha Folha de Ponto</p></a></li>
           {% endif %}
 
@@ -148,4 +151,145 @@
 {% block extra_js %}{% endblock %}
 {% block custom_js_auditoria %}{% endblock custom_js_auditoria %}
 </body>
+<!-- SCRIPT GLOBAL: SPINNER AUTOMÁTICO PARA AÇÕES PESADAS -->
+<script>
+    $(document).ready(function() {
+        // A MÁGICA: Intercepta TODOS os forms do tipo POST no sistema inteiro!
+        // (Ignoramos apenas os que tiverem a classe 'no-spinner' caso você não queira em algum específico)
+        $('form[method="post"]').not('.no-spinner').on('submit', function() {
+            var $form = $(this);
+            
+            // Previne o duplo clique ansioso
+            if ($form.data('processando')) {
+                return false; 
+            }
+            $form.data('processando', true);
+            
+            // Descobre qual botão foi clicado
+            var $btn = $(document.activeElement); 
+            if (!$btn.is('button[type="submit"], button[name="acao"]')) {
+                $btn = $form.find('button[type="submit"]').first();
+            }
+            
+            // Trava a largura do botão para ele não tremer na tela
+            var larguraOriginal = $btn.outerWidth();
+            $btn.css('width', larguraOriginal + 'px');
+            
+            // Coloca o spinner girando e o texto padrão
+            $btn.html('<i class="fas fa-spinner fa-spin"></i> Aguarde...');
+            
+            // Desabilita o botão fisicamente após milissegundos
+            setTimeout(function() {
+                $btn.prop('disabled', true).addClass('disabled');
+            }, 10);
+        });
+    });
+</script>
+
+<!-- SCRIPT GLOBAL: PADRONIZAÇÃO DE CAMPOS (Maiúsculas e Somente Números) -->
+<script>
+    $(document).ready(function() {
+        // 1. FORÇAR MAIÚSCULAS NO NOME
+        // Fica "ouvindo" qualquer digitação em campos com name="nome"
+        $('input[name="nome"]').on('input', function() {
+            // Pega o que foi digitado, joga pra maiúsculo e devolve pro campo na mesma hora
+            var valorAtual = $(this).val();
+            $(this).val(valorAtual.toUpperCase());
+        });
+
+        // 2. FORÇAR SOMENTE NÚMEROS NO ID FUNCIONAL
+        // Fica "ouvindo" qualquer digitação em campos com name="id_funcional"
+        $('input[name="id_funcional"]').on('input', function() {
+            var valorAtual = $(this).val();
+            // A expressão regular /[^0-9]/g procura QUALQUER COISA que não seja número de 0 a 9
+            // e substitui por "nada" (apaga em tempo real)
+            var valorLimpo = valorAtual.replace(/[^0-9]/g, '');
+            $(this).val(valorLimpo);
+        });
+    });
+</script>
+
+<!-- SCRIPT GLOBAL: EXIBIÇÃO DINÂMICA DE UNIDADES DE CONFERÊNCIA -->
+<script>
+    $(document).ready(function() {
+        // Verifica se estamos em uma tela que tem o campo de Perfil
+        var $campoPerfil = $('select[name="perfil"]');
+        
+        if ($campoPerfil.length > 0) {
+            // Encontra o "bloco" (a div inteira) que guarda as unidades de atuação
+            // Ele procura qualquer input de unidade e sobe até a div form-group principal
+            var $blocoUnidades = $('input[name="unidades_atuacao"]').closest('.form-group');
+
+            // Função que decide se mostra ou esconde
+            function ajustarVisibilidadeUnidades() {
+                var perfilSelecionado = $campoPerfil.val();
+                
+                // O valor salvo no banco para o Servidor Padrão é 'Servidor'
+                if (perfilSelecionado === 'Servidor') {
+                    // Desliza a caixinha para cima (esconde)
+                    $blocoUnidades.slideUp('fast');
+                    
+                    // SEGURANÇA: Desmarca todas as caixinhas silenciosamente
+                    // Assim, se o Agente mudar de ideia, não salvamos lixo no banco!
+                    $('input[name="unidades_atuacao"]').prop('checked', false);
+                } else {
+                    // Se for Conferente, Agente ou Admin, desliza para baixo (mostra)
+                    $blocoUnidades.slideDown('fast');
+                }
+            }
+
+            // Executa a verificação toda vez que o Agente/Admin mudar a opção no select
+            $campoPerfil.on('change', ajustarVisibilidadeUnidades);
+
+            // Executa a verificação também assim que a página carrega
+            // (Para esconder logo de cara se for um cadastro novo ou edição de Servidor)
+            ajustarVisibilidadeUnidades();
+        }
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Fica ouvindo qualquer digitação no campo de busca de unidades
+        $('#busca-unidades').on('keyup', function() {
+            // Pega o que foi digitado e transforma em minúsculo
+            var valorBuscado = $(this).val().toLowerCase();
+            
+            // Passa por cada uma das caixinhas de delegacia na tela
+            $('.small-checkbox-item-col').each(function() {
+                // Pega o texto (nome da delegacia) e transforma em minúsculo
+                var nomeUnidade = $(this).text().toLowerCase();
+                
+                // Se o nome da delegacia tiver o texto digitado, mostra. Se não, esconde.
+                if (nomeUnidade.indexOf(valorBuscado) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+    });
+</script>
+
+<!-- SCRIPT GLOBAL: MANTER POSIÇÃO DO SCROLL APÓS RECARREGAR A PÁGINA -->
+<script>
+    $(document).ready(function() {
+        // Cria uma chave única para a página atual (ex: /sigaf/agente/folha/123/)
+        var chaveScroll = "scrollPosition_" + window.location.pathname;
+
+        // 1. QUANDO A PÁGINA CARREGA: Verifica se tem alguma posição salva
+        var posicaoSalva = sessionStorage.getItem(chaveScroll);
+        if (posicaoSalva !== null) {
+            // Rola instantaneamente para a posição salva
+            window.scrollTo(0, parseInt(posicaoSalva, 10));
+            // Limpa a memória para não bugar se o usuário entrar na página depois por outro caminho
+            sessionStorage.removeItem(chaveScroll);
+        }
+
+        // 2. QUANDO A PÁGINA VAI RECARREGAR OU MUDAR: Salva a posição exata do scroll
+        window.addEventListener("beforeunload", function() {
+            sessionStorage.setItem(chaveScroll, window.scrollY);
+        });
+    });
+</script>
 </html>

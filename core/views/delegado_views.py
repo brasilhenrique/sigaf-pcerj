@@ -1,6 +1,10 @@
 # F:\dev\sigaf-novo\core\views\delegado_views.py
 # (COMPLETO E CORRIGIDO - Corrigido o redirecionamento após conferência da própria folha)
 
+from datetime import timedelta
+from django.db import transaction
+from django.utils import timezone
+from core.models import FolhaPonto, DiaPonto, LogAuditoria
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -43,7 +47,7 @@ def delegado_dashboard_view(request):
     Inclui folhas de Servidores, Agentes de Pessoal e do próprio usuário (se aplicável).
     """
     conferente_logado = request.user
-   
+    
     # Lista de IDs das unidades que o usuário logado (Delegado/Servidor-Conferente) atua
     unidades_para_conferencia_ids = list(conferente_logado.unidades_atuacao.all().values_list('id', flat=True))
 
@@ -58,7 +62,6 @@ def delegado_dashboard_view(request):
     if not unidades_para_conferencia_ids:
         messages.info(request, "Você não tem unidades atribuídas para conferência.")
         return render(request, 'core/delegado_dashboard.html', {'folhas_pendentes': []})
-
 
     # Encontra folhas de ponto de servidores lotados nas unidades que o usuário logado atua,
     # que tenham status 'Em Andamento' E dias que ainda não foram conferidos.
@@ -78,8 +81,44 @@ def delegado_dashboard_view(request):
         Q(servidor__perfil='Administrador Geral')
     ).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome', '-ano', '-trimestre')
 
+    # =================================================================
+    # NOVA LÓGICA DO POWER BUTTON: PROCESSAMENTO PARA O MODAL
+    # =================================================================
+    total_pendentes = folhas_pendentes.count()
+    total_limpas = 0
+    total_sujas = 0
+    lista_sujas = []
+
+    # Iteramos sobre a queryset que você já montou perfeitamente
+    for folha in folhas_pendentes:
+        # Pega apenas os dias PENDENTES desta folha que não são Livre, Sábado ou Domingo
+        dias_sujos = list(folha.dias.filter(
+            delegado_conferiu=False
+        ).exclude(
+            codigo__isnull=True
+        ).exclude(
+            codigo__codigo__in=['LIVRE', 'Livre', 'SÁBADO', 'DOMINGO', 'SABADO']
+        ).select_related('codigo').order_by('data_dia'))
+        
+        # Pendura uma propriedade "on-the-fly" na folha para as badges (verde/amarela) aparecerem no HTML
+        folha.tem_ocorrencias = len(dias_sujos) > 0 
+        
+        if not folha.tem_ocorrencias:
+            total_limpas += 1
+        else:
+            total_sujas += 1
+            # Chama a função _agrupar_dias_ocorrencia (que adicionamos na etapa anterior)
+            agrupamentos = _agrupar_dias_ocorrencia(dias_sujos)
+            for texto_grupo in agrupamentos:
+                lista_sujas.append(f"{folha.servidor.nome} - {texto_grupo}")
+    # =================================================================
+
     context = {
-        'folhas_pendentes': folhas_pendentes
+        'folhas_pendentes': folhas_pendentes,
+        'total_pendentes': total_pendentes,
+        'total_limpas': total_limpas,
+        'total_sujas': total_sujas,
+        'lista_sujas': lista_sujas,
     }
     return render(request, 'core/delegado_dashboard.html', context)
 
@@ -123,7 +162,8 @@ def delegado_ver_folha_view(request, folha_id):
 
     context = {
         'folha': folha,
-        'meses': meses_dados
+        'meses': meses_dados,
+        'hoje': date.today()
     }
     return render(request, 'core/delegado_conferencia_folha.html', context)
 
@@ -144,6 +184,13 @@ def delegado_conferir_dia_view(request, dia_id):
         messages.error(request, "Não é possível conferir dias de uma folha arquivada.")
         return redirect('core:delegado_ver_folha', folha_id=folha.id)
     
+    # Por isso (como deve ser):
+    if dia.data_dia > date.today():
+        messages.error(request, "Não é possível conferir um dia futuro.")
+        if folha.servidor == request.user:
+            return redirect('core:delegado_minha_folha')
+        return redirect('core:delegado_ver_folha', folha_id=folha.id)
+
     # Impede a conferência se o dia já foi conferido.
     if dia.delegado_conferiu:
         messages.warning(request, "Este dia já foi conferido.")
@@ -238,7 +285,7 @@ def delegado_conferir_mes_view(request, folha_id, mes_num):
             # Confere apenas se o dia NÃO foi conferido ainda E se atende à nova regra de negócio:
             # - É um dia "Livre" E assinado pelo servidor, OU
             # - Não é um dia "Livre" (ou seja, é bloqueado por outra ocorrência)
-            if not dia.delegado_conferiu and (dia.codigo.codigo.lower() != 'livre' or dia.servidor_assinou):
+            if dia.data_dia <= date.today() and not dia.delegado_conferiu and (dia.codigo.codigo.lower() != 'livre' or dia.servidor_assinou):
                 dia.delegado_conferiu = True
                 dia.delegado = request.user
                 dia.data_conferencia = date.today()
@@ -396,6 +443,163 @@ def delegado_minha_folha_view(request):
             })
 
     context = {
-        'folhas_com_dados': folhas_com_dados
+        'folhas_com_dados': folhas_com_dados,
+        'hoje': date.today()
     }
     return render(request, 'core/delegado_minha_folha.html', context)
+
+# ==========================================
+# FUNÇÕES DE CONFERÊNCIA EM LOTE E RÁPIDA
+# ==========================================
+
+def _agrupar_dias_ocorrencia(dias_sujos):
+    """
+    Função auxiliar que recebe uma lista de DiaPonto (com ocorrências) 
+    e retorna strings formatadas agrupando datas consecutivas.
+    Ex: "Férias do Exercício (Cód. 012) - 01/03/2026 a 10/03/2026"
+    """
+    if not dias_sujos:
+        return []
+
+    # Ordena os dias cronologicamente para garantir o agrupamento
+    dias_ordenados = sorted(dias_sujos, key=lambda d: d.data_dia)
+    
+    agrupamentos = []
+    dia_atual = dias_ordenados[0]
+    inicio_grupo = dia_atual.data_dia
+    fim_grupo = dia_atual.data_dia
+    codigo_atual = dia_atual.codigo
+
+    for i in range(1, len(dias_ordenados)):
+        dia_iteracao = dias_ordenados[i]
+        
+        # Se for o dia imediatamente seguinte E tiver o mesmo código de ocorrência
+        if dia_iteracao.data_dia == fim_grupo + timedelta(days=1) and dia_iteracao.codigo == codigo_atual:
+            fim_grupo = dia_iteracao.data_dia
+        else:
+            # Fechou um grupo. Monta a string.
+            if inicio_grupo == fim_grupo:
+                data_str = inicio_grupo.strftime('%d/%m/%Y')
+            else:
+                data_str = f"{inicio_grupo.strftime('%d/%m/%Y')} a {fim_grupo.strftime('%d/%m/%Y')}"
+            
+            nome_codigo = f"{codigo_atual.denominacao} (Cód. {codigo_atual.codigo})" if codigo_atual else "Código Desconhecido"
+            agrupamentos.append(f"{nome_codigo} - {data_str}")
+            
+            # Inicia novo grupo
+            inicio_grupo = dia_iteracao.data_dia
+            fim_grupo = dia_iteracao.data_dia
+            codigo_atual = dia_iteracao.codigo
+
+    # Adiciona o último grupo que ficou pendente no loop
+    if inicio_grupo == fim_grupo:
+        data_str = inicio_grupo.strftime('%d/%m/%Y')
+    else:
+        data_str = f"{inicio_grupo.strftime('%d/%m/%Y')} a {fim_grupo.strftime('%d/%m/%Y')}"
+        
+    nome_codigo = f"{codigo_atual.denominacao} (Cód. {codigo_atual.codigo})" if codigo_atual else "Código Desconhecido"
+    agrupamentos.append(f"{nome_codigo} - {data_str}")
+
+    return agrupamentos
+
+
+@login_required
+@require_POST
+def conferir_folha_rapido_view(request, folha_id):
+    """
+    Botão Verde da Tabela: Confere uma única folha por inteiro sem precisar abrir a página de detalhes.
+    """
+    if not request.user.is_conferente and not request.user.is_delegado and not request.user.is_administrador_geral:
+        messages.error(request, 'Acesso negado.')
+        return redirect('core:dashboard')
+
+    folha = get_object_or_404(FolhaPonto, id=folha_id)
+    
+    # Validação de Segurança Básica
+    if not request.user.is_administrador_geral and folha.servidor.lotacao not in request.user.unidades_atuacao.all():
+        messages.error(request, 'Você não tem permissão para conferir folhas desta unidade.')
+        return redirect('core:delegado_dashboard')
+
+    dias_pendentes = folha.dias.filter(delegado_conferiu=False)
+    total_dias = dias_pendentes.count()
+
+    if total_dias > 0:
+        with transaction.atomic():
+            dias_pendentes.update(
+                delegado_conferiu=True,
+                delegado=request.user,
+                data_conferencia=timezone.now()
+            )
+            folha.update_status()
+            
+            LogAuditoria.objects.create(
+                usuario=request.user,
+                acao="Conferência Rápida de Folha",
+                detalhes={"folha_id": folha.id, "servidor": folha.servidor.nome, "dias_conferidos": total_dias}
+            )
+            
+        messages.success(request, f'Folha de {folha.servidor.nome} conferida com sucesso ({total_dias} dias).')
+    else:
+        messages.warning(request, 'Esta folha não possui dias pendentes de conferência.')
+
+    return redirect('core:delegado_dashboard')
+
+
+@login_required
+@require_POST
+def conferir_lote_view(request):
+    """
+    O Fucking Power Button: Confere múltiplas folhas de uma vez baseando-se na escolha do modal.
+    """
+    if not request.user.is_conferente and not request.user.is_delegado and not request.user.is_administrador_geral:
+        messages.error(request, 'Acesso negado.')
+        return redirect('core:dashboard')
+
+    acao = request.POST.get('acao')
+    
+    # Pega as folhas pendentes da lotação do Delegado
+    if request.user.is_administrador_geral:
+        folhas_pendentes = FolhaPonto.objects.filter(dias__delegado_conferiu=False).distinct()
+    else:
+        folhas_pendentes = FolhaPonto.objects.filter(
+            servidor__lotacao__in=request.user.unidades_atuacao.all(),
+            dias__delegado_conferiu=False
+        ).distinct()
+
+    folhas_limpas = []
+    todas_folhas = []
+
+    for folha in folhas_pendentes:
+        todas_folhas.append(folha)
+        # Se a folha não tem nenhum dia com código diferente de Livre ou Finais de Semana
+        tem_ocorrencia = folha.dias.exclude(codigo__isnull=True).exclude(codigo__codigo__in=['LIVRE', 'Livre', 'SÁBADO', 'DOMINGO', 'SABADO']).exists()
+        if not tem_ocorrencia:
+            folhas_limpas.append(folha)
+
+    folhas_para_conferir = folhas_limpas if acao == 'somente_limpas' else todas_folhas
+    total_conferido = 0
+    
+    if not folhas_para_conferir:
+        messages.warning(request, "Nenhuma folha atende a este critério para conferência.")
+        return redirect('core:delegado_dashboard')
+
+    with transaction.atomic():
+        for folha in folhas_para_conferir:
+            dias_pendentes = folha.dias.filter(delegado_conferiu=False)
+            dias_pendentes.update(
+                delegado_conferiu=True,
+                delegado=request.user,
+                data_conferencia=timezone.now()
+            )
+            folha.update_status()
+            total_conferido += 1
+            
+        LogAuditoria.objects.create(
+            usuario=request.user,
+            acao="Conferência de Folhas em Lote",
+            detalhes={"tipo": acao, "total_folhas_conferidas": total_conferido}
+        )
+
+    tipo_str = "limpas" if acao == 'somente_limpas' else "incluindo ocorrências"
+    messages.success(request, f'Sucesso! {total_conferido} folhas conferidas em lote ({tipo_str}).')
+    return redirect('core:delegado_dashboard')

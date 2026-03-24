@@ -1,6 +1,11 @@
 # F:\dev\sigaf-novo\core\views\admin_views.py (CORRIGIDO - Inativação de Agente com Motivo)
 
 import re
+from core.models import CodigoOcorrencia
+from core.forms import CodigoOcorrenciaForm
+from core.models import Cargo
+from core.forms import CargoForm
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -589,3 +594,120 @@ def gerar_folhas_trimestrais_manual_view(request):
             messages.info(request, f"O sistema verificou todos os servidores ativos: Todas as folhas do {tri}º trimestre de {ano} já existem. Nenhuma nova folha foi criada.")
             
     return redirect('core:admin_geral_dashboard')
+
+@login_required
+def listar_cargos_view(request):
+    if request.user.perfil != 'Administrador Geral':
+        messages.error(request, "Acesso negado.")
+        return redirect('core:dashboard')
+        
+    cargos = Cargo.objects.all().order_by('nome')
+    return render(request, 'core/admin_geral_cargos.html', {'cargos': cargos})
+
+@login_required
+def adicionar_cargo_view(request):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        form = CargoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Cargo adicionado com sucesso!")
+            return redirect('core:admin_geral_cargos')
+    else:
+        form = CargoForm()
+        
+    context = {'form': form, 'acao': 'Adicionar'}
+    return render(request, 'core/admin_geral_cargo_form.html', context)
+
+@login_required
+def editar_cargo_view(request, cargo_id):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    cargo = get_object_or_404(Cargo, id=cargo_id)
+    
+    if request.method == 'POST':
+        form = CargoForm(request.POST, instance=cargo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Cargo atualizado com sucesso!")
+            return redirect('core:admin_geral_cargos')
+    else:
+        form = CargoForm(instance=cargo)
+        
+    context = {'form': form, 'acao': 'Editar', 'cargo': cargo}
+    return render(request, 'core/admin_geral_cargo_form.html', context)
+
+@require_POST
+@login_required
+def alternar_status_cargo_view(request, cargo_id):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    cargo = get_object_or_404(Cargo, id=cargo_id)
+    cargo.ativo = not cargo.ativo
+    cargo.save()
+    
+    status = "ativado" if cargo.ativo else "inativado"
+    messages.success(request, f"Cargo '{cargo.nome}' {status} com sucesso!")
+    return redirect('core:admin_geral_cargos')
+
+@login_required
+def listar_codigos_view(request):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+        
+    codigos = CodigoOcorrencia.objects.all()
+    return render(request, 'core/admin_geral_codigos.html', {'codigos': codigos})
+
+@login_required
+def adicionar_codigo_view(request):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        form = CodigoOcorrenciaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Código de Ocorrência adicionado com sucesso!")
+            return redirect('core:admin_geral_codigos')
+    else:
+        form = CodigoOcorrenciaForm()
+        
+    context = {'form': form, 'acao': 'Adicionar'}
+    return render(request, 'core/admin_geral_codigo_form.html', context)
+
+@login_required
+def editar_codigo_view(request, codigo_id):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    codigo_obj = get_object_or_404(CodigoOcorrencia, id=codigo_id)
+    
+    if request.method == 'POST':
+        form = CodigoOcorrenciaForm(request.POST, instance=codigo_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Código de Ocorrência atualizado com sucesso!")
+            return redirect('core:admin_geral_codigos')
+    else:
+        form = CodigoOcorrenciaForm(instance=codigo_obj)
+        
+    context = {'form': form, 'acao': 'Editar', 'codigo_obj': codigo_obj}
+    return render(request, 'core/admin_geral_codigo_form.html', context)
+
+@require_POST
+@login_required
+def alternar_status_codigo_view(request, codigo_id):
+    if request.user.perfil != 'Administrador Geral':
+        return redirect('core:dashboard')
+
+    codigo_obj = get_object_or_404(CodigoOcorrencia, id=codigo_id)
+    codigo_obj.ativo = not codigo_obj.ativo
+    codigo_obj.save()
+    
+    status = "ativado" if codigo_obj.ativo else "inativado"
+    messages.success(request, f"Código '{codigo_obj.codigo}' {status} com sucesso!")
+    return redirect('core:admin_geral_codigos')

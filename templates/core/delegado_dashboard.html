@@ -7,6 +7,15 @@
 {% block page_title_header %}Dashboard de Pendências{% endblock %} {# Adicionado para AdminLTE #}
 
 {% block content %}
+<!-- BOTÃO POWER DE CONFERÊNCIA EM LOTE -->
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-end">
+        <button type="button" class="btn btn-warning btn-lg font-weight-bold shadow" data-toggle="modal" data-target="#modalPowerButton" {% if not folhas_pendentes %}disabled{% endif %}>
+            <i class="fas fa-bolt mr-2"></i> Conferência em Lote
+        </button>
+    </div>
+</div>
+
 <div class="card card-danger card-outline">
     <div class="card-header">
         <h3 class="card-title">Servidores com Pendências de Conferência na sua Lotação</h3>
@@ -28,6 +37,12 @@
                             <td>
                                 <strong>{{ folha.servidor.nome }}</strong><br>
                                 <small class="text-muted">ID nº {{ folha.servidor.id_funcional }}</small>
+                                <!-- AVISO VISUAL DE OCORRÊNCIAS -->
+                                {% if folha.tem_ocorrencias %}
+                                    <br><span class="badge badge-warning mt-1"><i class="fas fa-exclamation-triangle"></i> Contém Ocorrências</span>
+                                {% else %}
+                                    <br><span class="badge badge-success mt-1"><i class="fas fa-check-circle"></i> Mês Regular</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="badge 
@@ -39,16 +54,22 @@
                                     {{ folha.servidor.perfil }}
                                     {% if folha.servidor.is_conferente %}{% if not folha.servidor.is_delegado %} (Conf.){% endif %}{% endif %} 
                                 </span>
-                            </td> {# NOVA COLUNA AQUI #}
+                            </td>
                             <td>{{ folha.get_trimestre_display }} de {{ folha.ano }}</td>
                             <td class="text-center align-middle">
-                                {% if folha.servidor == request.user %}
-                                    {# Delegado/Conferente acessando sua própria folha com pendências #}
-                                    <a href="{% url 'core:delegado_minha_folha' %}" class="btn btn-sm btn-warning" title="Conferir Minha Folha">Conferir Minha Folha</a> {# Ajustado para usar namespace #}
-                                {% else %}
-                                    {# Delegado/Conferente acessando folha de outro servidor #}
-                                    <a href="{% url 'core:delegado_ver_folha' folha.id %}" class="btn btn-sm btn-danger" title="Conferir Folha">Conferir Folha</a> {# Ajustado para usar namespace #}
-                                {% endif %}
+                                <div class="btn-group">
+                                    {% if folha.servidor == request.user %}
+                                        <a href="{% url 'core:delegado_minha_folha' %}" class="btn btn-sm btn-warning" title="Abrir Minha Folha"><i class="fas fa-search"></i> Abrir</a>
+                                    {% else %}
+                                        <a href="{% url 'core:delegado_ver_folha' folha.id %}" class="btn btn-sm btn-danger" title="Abrir Folha"><i class="fas fa-search"></i> Abrir</a>
+                                    {% endif %}
+                                    
+                                    <!-- BOTÃO DE CONFERÊNCIA RÁPIDA (DIRETO NA LINHA) -->
+                                    <form action="{% url 'core:delegado_conferir_folha_rapido' folha.id %}" method="post" class="d-inline" onsubmit="return confirm('Confirma a conferência integral desta folha?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success" title="Conferir Tudo Agora"><i class="fas fa-check-double"></i> Aprovar</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
@@ -88,4 +109,54 @@
             });
         });
     </script>
+
+<!-- MODAL DE CONFERÊNCIA EM LOTE -->
+<div class="modal fade" id="modalPowerButton" tabindex="-1" role="dialog" aria-labelledby="modalPowerButtonLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title font-weight-bold" id="modalPowerButtonLabel">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> Atenção: Conferência em Lote
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{% url 'core:delegado_conferir_lote' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="lead">
+                        Você possui <strong>{{ total_pendentes }}</strong> folhas aguardando conferência.
+                    </p>
+                    <p>
+                        Dessas, <strong class="text-success">{{ total_limpas }} estão com o mês regular</strong> (sem faltas, licenças ou afastamentos) e <strong class="text-danger">{{ total_sujas }} possuem ocorrências registradas</strong>.
+                    </p>
+
+                    {% if lista_sujas %}
+                    <hr>
+                    <p class="font-weight-bold text-danger mb-2"><i class="fas fa-list"></i> Detalhamento das folhas com ocorrências:</p>
+                    <div class="border rounded p-3 bg-light" style="max-height: 250px; overflow-y: auto;">
+                        <ul class="list-unstyled mb-0 small">
+                            {% for item in lista_sujas %}
+                                <li class="mb-1"><i class="fas fa-caret-right mr-1"></i> {{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer d-flex justify-content-between bg-light">
+                    <!-- OPÇÃO 1: CIRÚRGICA -->
+                    <button type="submit" name="acao" value="somente_limpas" class="btn btn-success btn-lg" {% if total_limpas == 0 %}disabled{% endif %}>
+                        <i class="fas fa-check-double mr-2"></i> Conferir Somente as {{ total_limpas }} Limpas
+                    </button>
+                    
+                    <!-- OPÇÃO 2: ASSUMIR RISCO -->
+                    <button type="submit" name="acao" value="todas" class="btn btn-danger" onclick="return confirm('Tem certeza absoluta? Você está atestando a veracidade de todas as ocorrências listadas.');" {% if total_pendentes == 0 %}disabled{% endif %}>
+                        <i class="fas fa-biohazard mr-1"></i> Conferir TUDO Mesmo Assim
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

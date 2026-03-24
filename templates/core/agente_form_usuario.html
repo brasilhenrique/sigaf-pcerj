@@ -25,7 +25,7 @@
 
     /* Ajuste para o label do checkbox */
     .small-checkbox-container .form-check-label {
-        font-size: 0.6em; /* Diminui o tamanho da fonte */
+        font-size: 0.6em !important; /* Definido para 0.6em e !important para garantir */
         vertical-align: middle; /* Garante que o texto também esteja alinhado */
         line-height: 1.2; /* Controla a altura da linha para texto multilinha */
         padding-left: 0.25em; /* Espaçamento entre o checkbox e o texto */
@@ -43,131 +43,136 @@
 {% endblock %}
 
 {% block content %}
-<div class="row justify-content-center"> {# Ajustado para layout AdminLTE #}
-    <div class="col-md-8">
-        <div class="card card-primary"> {# Estilo de card do AdminLTE #}
-            <div class="card-header">
-                <h3 class="card-title">{{ titulo }}</h3>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger shadow-sm">
+                {% for error in form.non_field_errors %}
+                    <p class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i> {{ error }}</p>
+                {% endfor %}
             </div>
-            <div class="card-body">
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                <p>{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+        {% endif %}
 
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group mb-3"> {# Usando form-group #}
-                                {% if form.id_funcional %} {# Campo só presente na criação #}
-                                    <label for="{{ form.id_funcional.id_for_label }}" class="form-label">{{ form.id_funcional.label }}</label>
+        <form method="post" novalidate class="form-spinner"> 
+            {% csrf_token %}
+            
+            <div class="row">
+                <!-- BLOCO A: DADOS DE IDENTIFICAÇÃO -->
+                <div class="col-md-6">
+                    <div class="card card-primary card-outline shadow-sm h-100">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold"><i class="fas fa-id-card mr-2"></i> Dados Funcionais</h3>
+                        </div>
+                        <div class="card-body">
+                            
+                            <div class="form-group mb-3">
+                                {% if form.id_funcional %} 
+                                    <label for="{{ form.id_funcional.id_for_label }}" class="form-label">{{ form.id_funcional.label }} (Somente Números)</label>
                                     {{ form.id_funcional }}
                                     {% if form.id_funcional.errors %}<div class="text-danger small">{{ form.id_funcional.errors|striptags }}</div>{% endif %}
-                                {% else %} {# Na edição, exibe como texto desabilitado #}
+                                {% else %} 
                                     <label class="form-label">ID Funcional</label>
-                                    <input type="text" class="form-control" value="{{ usuario_a_editar.id_funcional }}" disabled>
-                                    <small class="form-text text-muted">ID Funcional não pode ser alterado após a criação.</small>
+                                    <input type="text" class="form-control bg-light" value="{{ usuario_a_editar.id_funcional }}" disabled>
+                                    <small class="form-text text-muted">O ID Funcional não pode ser alterado após a criação.</small>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="form-group mb-3"> {# Usando form-group #}
+
+                            <div class="form-group mb-3">
                                 <label for="{{ form.nome.id_for_label }}" class="form-label">{{ form.nome.label }}</label>
                                 {{ form.nome }}
                                 {% if form.nome.errors %}<div class="text-danger small">{{ form.nome.errors|striptags }}</div>{% endif %}
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3"> {# Usando form-group #}
+                            <div class="form-group mb-3">
                                 <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
                                 {{ form.email }}
                                 {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors|striptags }}</div>{% endif %}
                             </div>
+
+                            <!-- OLHA O CARGO AQUI! -->
+                            <div class="form-group mb-3">
+                                <label for="{{ form.cargo.id_for_label }}" class="form-label">{{ form.cargo.label|default:"Cargo Efetivo" }}</label>
+                                {{ form.cargo }}
+                                {% if form.cargo.errors %}<div class="text-danger small">{{ form.cargo.errors|striptags }}</div>{% endif %}
+                            </div>
+
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3"> {# Usando form-group #}
+                    </div>
+                </div>
+
+                <!-- BLOCO B: ACESSO E REGRAS -->
+                <div class="col-md-6">
+                    <div class="card card-warning card-outline shadow-sm h-100">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold"><i class="fas fa-shield-alt mr-2"></i> Configurações no SIGAF</h3>
+                        </div>
+                        <div class="card-body">
+                            
+                            <div class="form-group mb-3">
                                 <label for="{{ form.lotacao.id_for_label }}" class="form-label">{{ form.lotacao.label }}</label>
                                 {{ form.lotacao }}
                                 {% if form.lotacao.errors %}<div class="text-danger small">{{ form.lotacao.errors|striptags }}</div>{% endif %}
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3"> {# Usando form-group #}
+                            <div class="form-group mb-3">
                                 <label for="{{ form.perfil.id_for_label }}" class="form-label">{{ form.perfil.label }}</label>
                                 {{ form.perfil }}
                                 {% if form.perfil.errors %}<div class="text-danger small">{{ form.perfil.errors|striptags }}</div>{% endif %}
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            {# Campo ativo só está presente no form de edição (UsuarioChangeForm) #}
-                            {% if form.ativo %}
-                            <div class="form-group mt-4 pt-2"> {# Adicionado mt-4 pt-2 para alinhar com label de perfil #}
-                                <div class="form-check">
-                                    {{ form.ativo }}
-                                    <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
-                                        {{ form.ativo.label }}
-                                    </label>
-                                    {% if form.ativo.errors %}<div class="text-danger small">{{ form.ativo.errors|striptags }}</div>{% endif %}
-                                </div>
+                            
+                            {% if form.status_servidor %}
+                            <div class="form-group mb-3 border-top pt-3 mt-4">
+                                <label for="{{ form.status_servidor.id_for_label }}" class="form-label text-danger"><i class="fas fa-user-tag mr-1"></i> {{ form.status_servidor.label }}</label>
+                                {{ form.status_servidor }}
+                                {% if form.status_servidor.errors %}<div class="text-danger small mt-1">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
                             </div>
                             {% endif %}
-                        </div>
-                    </div>
-                    {# Adicionado campo status_servidor para edição #}
-                    {% if form.status_servidor %}
-                    <div class="form-group mb-3">
-                        <label for="{{ form.status_servidor.id_for_label }}" class="form-label">{{ form.status_servidor.label }}</label>
-                        {{ form.status_servidor }}
-                        {% if form.status_servidor.errors %}<div class="text-danger small">{{ form.status_servidor.errors|striptags }}</div>{% endif %}
-                    </div>
-                    {% endif %}
 
-                    {# NOVO: Campo unidades_atuacao #}
-                    <div class="form-group mb-3">
-                        <label>{{ form.unidades_atuacao.label }}</label>
-                        <div class="row p-2 small-checkbox-container" style="background-color: #f8f9fa; border-radius: 5px;">
-                            {# MUDANÇA AQUI: col-md-4 para 3 colunas, e small-checkbox-item-col para alinhar à esquerda #}
-                            {% for subwidget in form.unidades_atuacao.subwidgets %}
-                            <div class="col-md-4 small-checkbox-item-col"> {# col-md-4 para 3 colunas #}
-                                <div class="form-check">
-                                    {{ subwidget.tag }}
-                                    <label class="form-check-label" for="{{ subwidget.id_for_label }}">
-                                        {{ subwidget.choice_label }}
-                                    </label>
+                            {% if form.unidades_atuacao %}
+                            <div class="form-group mb-3 border-top pt-3 mt-4">
+                                <label class="text-primary"><i class="fas fa-building mr-1"></i> {{ form.unidades_atuacao.label }}</label>
+                                <p class="small text-muted mb-2">Marque abaixo se este servidor for responsável por conferir folhas de outras unidades.</p>
+                                
+                                <div class="input-group input-group-sm mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    </div>
+                                    <input type="text" id="busca-unidades" class="form-control" placeholder="Digite para filtrar rapidamente as unidades...">
                                 </div>
+                                
+                                <div class="row p-2 small-checkbox-container border rounded bg-light" id="lista-unidades">
+                                    {% for subwidget in form.unidades_atuacao.subwidgets %}
+                                    <div class="col-md-6 small-checkbox-item-col mb-1"> 
+                                        <div class="form-check">
+                                            {{ subwidget.tag }}
+                                            <label class="form-check-label" for="{{ subwidget.id_for_label }}">
+                                                {{ subwidget.choice_label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                        <p class="col-12 text-muted small">Nenhuma unidade ativa disponível.</p>
+                                    {% endfor %}
+                                </div>
+                                {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
                             </div>
-                            {% empty %}
-                                <p class="col-12 text-muted">Nenhuma unidade ativa disponível para seleção.</p>
-                            {% endfor %}
-                        </div>
-                        {% if form.unidades_atuacao.errors %}<div class="text-danger small mt-1">{{ form.unidades_atuacao.errors|first }}</div>{% endif %}
-                        <small class="form-text text-muted">{{ form.unidades_atuacao.help_text }}</small>
-                    </div>
+                            {% endif %}
 
-                    <hr>
-                    <div class="card-footer d-flex justify-content-end"> {# Botões dentro do card-footer #}
-                        <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary me-2">Cancelar</a> {# Ajustado para usar namespace #}
-                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <!-- BOTÕES DE AÇÃO -->
+            <div class="row mt-4 mb-5">
+                <div class="col-12 text-right">
+                    <a href="{% url 'core:agente_dashboard' %}" class="btn btn-secondary btn-lg mr-2"><i class="fas fa-times mr-1"></i> Cancelar</a>
+                    <button type="submit" class="btn btn-success btn-lg shadow"><i class="fas fa-save mr-1"></i> Salvar Servidor</button>
+                </div>
+            </div>
+            
+        </form>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{# Removido script JS inline que aplicava classes, pois os forms do Django já foram ajustados para isso #}
-{# e a herança de base_adminlte.html já cuida dos plugins jQuery/Bootstrap. #}
 {% endblock %}

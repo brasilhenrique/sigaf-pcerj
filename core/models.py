@@ -8,6 +8,7 @@ class Unidade(models.Model):
     nome_unidade = models.CharField(max_length=100, unique=True)
     ativo = models.BooleanField(default=True)
     codigo_ua = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="Código UA")
+    regime_plantao = models.BooleanField(default=False, verbose_name="Regime de Plantão (Finais de Semana Livres)")
 
     def __str__(self):
         return self.nome_unidade
@@ -29,36 +30,30 @@ class UsuarioManager(BaseUserManager):
     def create_superuser(self, id_funcional, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('perfil', 'Administrador Geral')
+        extra_fields.setdefault('funcao', 'Administrador Geral')
         extra_fields.setdefault('nome', 'Administrador do Sistema')
         
         return self.create_user(id_funcional, password, **extra_fields)
 
+class Cargo(models.Model):
+    nome = models.CharField(max_length=100, unique=True, verbose_name="Nome do Cargo")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = "Cargo"
+        verbose_name_plural = "Cargos"
+
 class Usuario(AbstractUser):
-    POLICIA_CARGOS = [
-        ('Assistente I', 'Assistente I'),
-        ('Assistente II', 'Assistente II'),
-        ('Auxiliar Policial de Necropsia', 'Auxiliar Policial de Necropsia'),
-        ('Comissário de Polícia', 'Comissário de Polícia'),
-        ('Inspetor de Polícia', 'Inspetor de Polícia'),
-        ('Investigador Policial', 'Investigador Policial'),
-        ('Oficial de Cartório Policial', 'Oficial de Cartório Policial'),
-        ('Perito Criminal', 'Perito Criminal'),
-        ('Perito Legista', 'Perito Legista'),
-        ('Perito Papiloscopista', 'Perito Papiloscopista'),
-        ('Piloto Policial', 'Piloto Policial'),
-        ('Técnico Policial de Necropsia', 'Técnico Policial de Necropsia'),
-    ]
-
-    POLICIA_CARGOS_NAMES = [cargo[0] for cargo in POLICIA_CARGOS]
-
     PERFIS_FUNCIONAL = [
+        ('Servidor', 'Servidor Comum'), 
         ('Delegado de Polícia', 'Delegado de Polícia'), 
         ('Agente de Pessoal', 'Agente de Pessoal'),
         ('Administrador Geral', 'Administrador Geral'),
     ]
-
-    PERFIL_CHOICES = POLICIA_CARGOS + PERFIS_FUNCIONAL 
     
     STATUS_CHOICES = [
         ('Ativo', 'Ativo'),
@@ -72,7 +67,13 @@ class Usuario(AbstractUser):
     id_funcional = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    perfil = models.CharField(max_length=50, choices=PERFIL_CHOICES, default='Investigador Policial')
+    
+    # O cargo virou dinâmico
+    cargo = models.ForeignKey(Cargo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Cargo")
+    
+    # A função (perfil de acesso) continua hardcoded
+    perfil = models.CharField(max_length=50, choices=PERFIS_FUNCIONAL, default='Servidor', verbose_name="Função no Sistema")
+    
     lotacao = models.ForeignKey(Unidade, on_delete=models.SET_NULL, null=True, blank=True, related_name='servidores')
     ativo = models.BooleanField(default=True)
     status_servidor = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ativo')
@@ -112,11 +113,23 @@ class Usuario(AbstractUser):
     def save(self, *args, **kwargs):
         self.nome = self.nome.upper()
         self.username = self.id_funcional
+        
+        # A Mágica de Atualização da "Fotografia" do Cargo nas folhas Em Andamento
+        if self.pk:
+            try:
+                usuario_antigo = type(self).objects.get(pk=self.pk)
+                if usuario_antigo.cargo != self.cargo:
+                    from core.models import FolhaPonto 
+                    novo_nome_cargo = self.cargo.nome if self.cargo else ''
+                    
+                    FolhaPonto.objects.filter(
+                        servidor=self, 
+                        status='Em Andamento'
+                    ).update(cargo_servidor_na_folha=novo_nome_cargo)
+            except type(self).DoesNotExist:
+                pass
+                
         super(Usuario, self).save(*args, **kwargs)
-
-    @property
-    def is_policia_cargo(self):
-        return self.perfil in self.POLICIA_CARGOS_NAMES
 
     @property
     def is_delegado(self):
@@ -138,12 +151,18 @@ class Usuario(AbstractUser):
         return self.perfil == 'Administrador Geral'
 
 class CodigoOcorrencia(models.Model):
-    codigo = models.CharField(max_length=10, unique=True) 
-    denominacao = models.CharField(max_length=255)
-    descricao_completa = models.TextField(blank=True, null=True)
+    codigo = models.CharField(max_length=10, unique=True, verbose_name="Sigla/Código") 
+    denominacao = models.CharField(max_length=255, verbose_name="Denominação")
+    descricao_completa = models.TextField(blank=True, null=True, verbose_name="Descrição Completa")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo no Sistema") # NOVO CAMPO DE SEGURANÇA
 
     def __str__(self):
         return f"{self.codigo} - {self.denominacao}"
+        
+    class Meta:
+        ordering = ['codigo']
+        verbose_name = "Código de Ocorrência"
+        verbose_name_plural = "Códigos de Ocorrência"
 
 class FolhaPonto(models.Model):
     TRIMESTRE_CHOICES = [
@@ -167,16 +186,16 @@ class FolhaPonto(models.Model):
     ativa = models.BooleanField(default=True)
     observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
     
-    # NOVO CAMPO: Snapshot do cargo para histórico
+    # Snapshot do cargo para histórico
     cargo_servidor_na_folha = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cargo na Época")
 
     def __str__(self):
         return f"Folha de {self.servidor.nome} - {self.get_trimestre_display()} de {self.ano}"
 
     def save(self, *args, **kwargs):
-        # Se o campo estiver vazio e o servidor existir, preenche com o perfil atual
+        # Captura o nome dinâmico do cargo se existir
         if not self.cargo_servidor_na_folha and self.servidor:
-            self.cargo_servidor_na_folha = self.servidor.perfil
+            self.cargo_servidor_na_folha = self.servidor.cargo.nome if self.servidor.cargo else ''
         super().save(*args, **kwargs)
 
     def update_status(self):
@@ -191,7 +210,6 @@ class FolhaPonto(models.Model):
         pendencia_conferencia = self.dias.filter(
             delegado_conferiu=False
         ).exists()
-
 
         if not pendencia_assinatura and not pendencia_conferencia:
             if self.status != 'Concluída':

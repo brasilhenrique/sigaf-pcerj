@@ -1,0 +1,41 @@
+{% extends 'base_adminlte.html' %}
+
+{% block page_title %}{{ acao }} Cargo{% endblock %}
+{% block page_title_header %}{{ acao }} Cargo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-id-badge mr-2"></i> Dados do Cargo</h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="{{ form.nome.id_for_label }}">Nome do Cargo</label>
+                        {{ form.nome }}
+                        {% if form.nome.errors %}
+                            <div class="text-danger small mt-1">{{ form.nome.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch custom-control-lg mt-3" style="transform: scale(1.1); transform-origin: left;">
+                            {{ form.ativo }}
+                            <label class="custom-control-label font-weight-normal" for="ativoSwitch" style="cursor: pointer;">
+                                Cargo Ativo no Sistema
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{% url 'core:admin_geral_cargos' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Salvar Cargo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
