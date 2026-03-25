@@ -72,7 +72,7 @@
                                     </td>
                                     <td class="text-right align-middle">
                                         <a href="{% url 'core:gerenciar_ponto' folha.id %}" class="btn btn-sm {% if folha.servidor.pk == request.user.pk %}btn-info{% else %}btn-primary{% endif %}">
-                                            {% if folha.servidor.pk == request.user.pk %}Minha Folha{% else %}Gerenciar{% endif %}
+                                            {% if folha.servidor.pk == request.user.pk %}Gerenciar Minha Folha{% else %}Gerenciar{% endif %}
                                         </a>
                                     </td>
                                 </tr>
