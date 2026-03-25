@@ -525,3 +525,38 @@ def salvar_observacoes_folha_view(request, folha_id):
         messages.info(request, "Nenhuma alteração nas observações para salvar.")
 
     return redirect('core:gerenciar_ponto', folha_id=folha_id)
+
+@require_POST
+@agente_required
+def resetar_senha_servidor_view(request, usuario_id):
+    """
+    Permite ao Agente de Pessoal resetar a senha de um servidor para o ID Funcional.
+    """
+    servidor = get_object_or_404(Usuario, id=usuario_id)
+
+    # Trava de Segurança: Verifica se o Agente tem acesso à lotação do servidor
+    if request.user.perfil == 'Agente de Pessoal':
+        if not (servidor.lotacao and servidor.lotacao in request.user.unidades_atuacao.all()):
+            messages.error(request, "Acesso negado. Este servidor não pertence às suas unidades de atuação.")
+            return redirect('core:agente_dashboard')
+            
+        # Impede o Agente de resetar a senha do Administrador Geral
+        if servidor.perfil == 'Administrador Geral':
+            messages.error(request, "Você não tem permissão para resetar a senha de um Administrador Geral.")
+            return redirect('core:agente_dashboard')
+
+    # A Mágica acontece aqui: set_password já faz a criptografia (hash) da senha
+    servidor.set_password(servidor.id_funcional)
+    servidor.precisa_trocar_senha = True # <--- LIGA A BANDEIRA DE TROCA OBRIGATÓRIA
+    servidor.save(update_fields=['password', 'precisa_trocar_senha'])
+
+    # Registra no log para auditoria (quem resetou e de quem)
+    registrar_log(request, 'RESET_SENHA', {
+        'servidor_id_funcional': servidor.id_funcional,
+        'acao_por': request.user.id_funcional
+    })
+
+    messages.success(request, f"Senha de {servidor.nome} resetada com sucesso! A nova senha é o ID Funcional: {servidor.id_funcional}")
+    
+    # Redireciona de volta para o histórico do servidor
+    return redirect('core:agente_historico_folhas', usuario_id=servidor.id)

@@ -78,6 +78,7 @@ class Usuario(AbstractUser):
     ativo = models.BooleanField(default=True)
     status_servidor = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ativo')
     primeiro_login = models.BooleanField(default=True)
+    precisa_trocar_senha = models.BooleanField(default=True, verbose_name="Precisa trocar a senha no próximo login?")
     data_inativacao = models.DateField(null=True, blank=True)
     
     unidades_atuacao = models.ManyToManyField(

@@ -27,9 +27,16 @@
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">Folhas de Ponto de {{ servidor.nome }} (ID: {{ servidor.id_funcional }})</h3>
-        <div class="card-tools">
+        <div class="card-tools d-flex align-items-center">
+            <form action="{% url 'core:resetar_senha_servidor' servidor.id %}" method="post" class="d-inline mr-2" onsubmit="return confirm('Tem certeza que deseja RESETAR a senha de {{ servidor.nome }}? A nova senha voltará a ser o ID Funcional do servidor.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="fas fa-key mr-1"></i> Resetar Senha
+                </button>
+            </form>
+
             <a href="{% url 'core:agente_criar_folha' %}?usuario_id={{ servidor.id }}" class="btn btn-success btn-sm">
-                <i class="fas fa-plus"></i> Criar Folha Manual
+                <i class="fas fa-plus mr-1"></i> Criar Folha Manual
             </a>
         </div>
     </div>

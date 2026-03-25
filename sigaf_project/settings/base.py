@@ -28,6 +28,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ForcarTrocaSenhaMiddleware', # <--- NOSSO LEÃO DE CHÁCARA AQUI
 ]
 
 ROOT_URLCONF = 'sigaf_project.urls'

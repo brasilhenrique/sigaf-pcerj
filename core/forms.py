@@ -51,13 +51,13 @@ class CriarFolhaManualForm(forms.ModelForm):
                 lotacao__in=user.unidades_atuacao.all(), 
                 ativo=True
             ).exclude(
-                 perfil__in=['Administrador Geral', 'Delegado de Polícia']
+                 perfil='Administrador Geral' # Mantemos apenas a exclusão do Admin Geral (TI)
             ).order_by('nome')
         else: 
             self.fields['servidor'].queryset = Usuario.objects.filter(
                 ativo=True
             ).exclude(
-                perfil__in=['Administrador Geral', 'Delegado de Polícia']
+                perfil='Administrador Geral' # Mantemos apenas a exclusão do Admin Geral (TI)
             ).order_by('nome')
 
 

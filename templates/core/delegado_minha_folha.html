@@ -41,7 +41,9 @@
                                     <input type="hidden" name="next" value="{{ request.path }}">
                                     <button type="submit" class="btn btn-sm btn-success">Assinar Mês</button>
                                 </form>
-                            {% elif mes_data.totalmente_assinado and not mes_data.totalmente_conferido %}
+                            {% endif %}
+                            
+                            {% if mes_data.pode_desfazer_assinatura_mes %}
                                 <form action="{% url 'core:desfazer_mes_inteiro' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
                                     {% csrf_token %}
                                     <input type="hidden" name="next" value="{{ request.path }}">
@@ -54,8 +56,10 @@
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-info">Conferir Mês</button>
                                 </form>
-                            {% elif mes_data.totalmente_conferido %}
-                                <form action="{% url 'core:desfazer_conferencia_mes' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1">
+                            {% endif %}
+                            
+                            {% if mes_data.pode_desfazer_conferencia_mes %}
+                                <form action="{% url 'core:desfazer_conferencia_mes' item.folha_ponto.id mes_data.mes_num %}" method="post" class="d-inline ml-1" onsubmit="return confirm('Tem certeza que deseja desfazer a conferência deste mês?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Desfazer Conf.</button>
                                 </form>

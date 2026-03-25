@@ -29,11 +29,11 @@ def login_view(request):
         user = authenticate(request, username=id_funcional, password=password)
         
         if user is not None:
-            # Lógica de primeiro login e força troca de senha (Fase 2 - Produção)
-            if user.primeiro_login:
-                messages.info(request, "Este é seu primeiro login ou sua senha foi redefinida. Por favor, crie uma nova senha segura.")
-                login(request, user) # Loga o usuário temporariamente para a troca de senha
-                registrar_log(request, 'FIRST_LOGIN_REDIRECT', {'id_funcional': id_funcional}, ip_address=get_client_ip(request))
+            # Lógica de primeiro login e força troca de senha
+            if getattr(user, 'precisa_trocar_senha', False):
+                messages.info(request, "Atenção: Por questões de segurança, você precisa criar uma nova senha para acessar o sistema.")
+                login(request, user) 
+                registrar_log(request, 'PASSWORD_CHANGE_REQUIRED_REDIRECT', {'id_funcional': id_funcional}, ip_address=get_client_ip(request))
                 return redirect('core:change_password')
 
             login(request, user)
@@ -90,10 +90,10 @@ def change_password_view(request):
 
             update_session_auth_hash(request, user)  # Mantém o usuário logado
             
-            # Se a senha foi alterada via o fluxo de "primeiro login", reseta a flag.
-            if user.primeiro_login:
-                user.primeiro_login = False
-                user.save(update_fields=['primeiro_login'])
+            # DESLIGA A BANDEIRA após a troca de senha com sucesso
+            if getattr(user, 'precisa_trocar_senha', False):
+                user.precisa_trocar_senha = False
+                user.save(update_fields=['precisa_trocar_senha'])
 
             messages.success(request, 'Sua senha foi alterada com sucesso!')
             # Redireciona para o dashboard correto após a troca de senha

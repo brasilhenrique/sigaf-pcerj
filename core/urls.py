@@ -103,6 +103,7 @@ urlpatterns = [
     path('agente/conferentes/atribuir/<int:usuario_id>/', agente_usuario_views.atribuir_conferente_view, name='atribuir_conferente'), 
     path('agente/conferentes/remover/<int:usuario_id>/', agente_usuario_views.remover_conferente_view, name='remover_conferente'), 
     path('agente/minha_folha/', servidor_views.dashboard_view, name='agente_minha_folha'),
+    path('agente/servidor/<int:usuario_id>/resetar-senha/', agente_folha_ponto_views.resetar_senha_servidor_view, name='resetar_senha_servidor'),
     
     # Delegado
     path('delegado/minha_folha/', delegado_views.delegado_minha_folha_view, name='delegado_minha_folha'), 

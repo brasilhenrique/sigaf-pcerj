@@ -76,9 +76,9 @@ def delegado_dashboard_view(request):
         ~Q(dias__codigo__codigo__iexact='Livre') # OU se NÃO for 'Livre' (ou seja, é bloqueado por outra ocorrência)
     ).distinct()
 
-    # Aplicamos a lógica de exclusão: SOMENTE Administradores Gerais (que não têm folha no sistema)
+    # Aplicamos a lógica de exclusão: Administradores Gerais E a própria folha do usuário logado
     folhas_pendentes = base_query.exclude(
-        Q(servidor__perfil='Administrador Geral')
+        Q(servidor__perfil='Administrador Geral') | Q(servidor=request.user)
     ).select_related('servidor', 'servidor__lotacao').order_by('servidor__nome', '-ano', '-trimestre')
 
     # =================================================================
@@ -520,7 +520,7 @@ def conferir_folha_rapido_view(request, folha_id):
         messages.error(request, 'Você não tem permissão para conferir folhas desta unidade.')
         return redirect('core:delegado_dashboard')
 
-    dias_pendentes = folha.dias.filter(delegado_conferiu=False)
+    dias_pendentes = folha.dias.filter(delegado_conferiu=False, data_dia__lte=date.today()).exclude(codigo__codigo__iexact='livre', servidor_assinou=False)
     total_dias = dias_pendentes.count()
 
     if total_dias > 0:
@@ -557,14 +557,16 @@ def conferir_lote_view(request):
 
     acao = request.POST.get('acao')
     
-    # Pega as folhas pendentes da lotação do Delegado
+    # Pega as folhas pendentes da lotação, EXCLUINDO a própria folha do usuário
     if request.user.is_administrador_geral:
-        folhas_pendentes = FolhaPonto.objects.filter(dias__delegado_conferiu=False).distinct()
+        folhas_pendentes = FolhaPonto.objects.filter(
+            dias__delegado_conferiu=False
+        ).exclude(servidor=request.user).distinct()
     else:
         folhas_pendentes = FolhaPonto.objects.filter(
             servidor__lotacao__in=request.user.unidades_atuacao.all(),
             dias__delegado_conferiu=False
-        ).distinct()
+        ).exclude(servidor=request.user).distinct()
 
     folhas_limpas = []
     todas_folhas = []
@@ -585,7 +587,7 @@ def conferir_lote_view(request):
 
     with transaction.atomic():
         for folha in folhas_para_conferir:
-            dias_pendentes = folha.dias.filter(delegado_conferiu=False)
+            dias_pendentes = folha.dias.filter(delegado_conferiu=False, data_dia__lte=date.today()).exclude(codigo__codigo__iexact='livre', servidor_assinou=False)
             dias_pendentes.update(
                 delegado_conferiu=True,
                 delegado=request.user,
