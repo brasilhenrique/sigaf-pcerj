@@ -17,3 +17,5 @@ db.sqlite3
 # Ignorar os arquivos de chave SSH
 pcerj_ssh_key
 pcerj_ssh_key.pub
+
+staticfiles/
